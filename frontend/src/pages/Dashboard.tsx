@@ -24,8 +24,11 @@ export function DashboardPage() {
   if (error) return <div className="page-error">Erro ao carregar: {(error as Error).message}</div>;
   if (!data) return null;
 
-  const hasPlans = data.activePlans.length > 0;
+  const goals = data.activePlans;
+  const budgetItems = data.budgetProgress.filter((item) => item.limit > 0 || item.spent > 0);
+  const hasPlans = goals.length > 0;
   const hasAccounts = data.accountBalances.length > 0;
+  const hasBudget = budgetItems.length > 0;
   const showPriority = hasPlans || hasAccounts;
 
   return (
@@ -46,7 +49,7 @@ export function DashboardPage() {
             <section className="priority-panel glass-module" aria-labelledby="metas-heading">
               <h2 id="metas-heading" className="panel-title">Metas</h2>
               <ul className="compact-list">
-                {data.activePlans.map((plan) => (
+                {goals.map((plan) => (
                   <li key={plan.id} className="compact-item">
                     <div className="compact-item__head">
                       <span className="compact-item__name">{plan.name}</span>
@@ -115,11 +118,11 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {data.budgetProgress.length > 0 && (
+      {hasBudget && (
         <section className="section budget-section" aria-labelledby="budget-heading">
           <h2 id="budget-heading" className="section-title">Orçamento por categoria</h2>
           <div className="budget-grid">
-            {data.budgetProgress.map((item) => (
+            {budgetItems.map((item) => (
               <article
                 key={item.category.id}
                 className={`budget-item${item.paceStatus ? ` budget-item--${item.paceStatus}` : ''}`}

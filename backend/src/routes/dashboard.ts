@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { TransactionType } from '@prisma/client';
+import { PlanType, TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { isGoalAchieved } from '../lib/goal.js';
 import { monthRange } from '../lib/monthRange.js';
@@ -56,9 +56,11 @@ router.get('/monthly', async (req, res, next) => {
       expensesByCategory.map((e) => [e.categoryId, Number(e._sum.amount ?? 0)]),
     );
 
-    const budgetProgress = budgets.map((b) => {
+    const budgetProgress = budgets.flatMap((b) => {
       const spent = spentByCategory.get(b.categoryId) ?? 0;
       const limit = Number(b.limitAmount);
+      if (limit <= 0 && spent <= 0) return [];
+
       const remaining = limit - spent;
       const percent = limit > 0 ? (spent / limit) * 100 : 0;
       const projected = projectedMonth(spent, daysElapsed, daysInMonth);
@@ -79,7 +81,7 @@ router.get('/monthly', async (req, res, next) => {
       else if (percent >= 50) alert = '50_percent';
       else if (projected > limit) alert = 'pace_above_budget';
 
-      return {
+      return [{
         category: b.category,
         limit,
         spent,
@@ -90,7 +92,7 @@ router.get('/monthly', async (req, res, next) => {
         paceRatio,
         paceStatus: status,
         alert,
-      };
+      }];
     });
 
     const accounts = await prisma.account.findMany({ where: { isActive: true } });
@@ -146,7 +148,7 @@ router.get('/monthly', async (req, res, next) => {
     });
 
     const activePlans = await prisma.plan.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', type: PlanType.GOAL },
       include: { category: true },
     });
     const visibleActivePlans = activePlans.flatMap((plan) => {
