@@ -23,21 +23,26 @@ const updateGoalSchema = createGoalSchema
     message: 'Informe ao menos um campo para atualizar',
   });
 
-async function balanceOf(accountId: string): Promise<number> {
+type BalanceClient = Pick<Prisma.TransactionClient, 'transaction'>;
+
+async function balanceOf(
+  accountId: string,
+  client: BalanceClient = prisma,
+): Promise<number> {
   const [income, expense, transferIn, transferOut] = await Promise.all([
-    prisma.transaction.aggregate({
+    client.transaction.aggregate({
       where: { accountId, type: TransactionType.INCOME, isCancelled: false },
       _sum: { amount: true },
     }),
-    prisma.transaction.aggregate({
+    client.transaction.aggregate({
       where: { accountId, type: TransactionType.EXPENSE, isCancelled: false },
       _sum: { amount: true },
     }),
-    prisma.transaction.aggregate({
+    client.transaction.aggregate({
       where: { toAccountId: accountId, type: TransactionType.TRANSFER, isCancelled: false },
       _sum: { amount: true },
     }),
-    prisma.transaction.aggregate({
+    client.transaction.aggregate({
       where: { accountId, type: TransactionType.TRANSFER, isCancelled: false },
       _sum: { amount: true },
     }),
@@ -51,10 +56,9 @@ async function balanceOf(accountId: string): Promise<number> {
   });
 }
 
-async function lockPiggyAndAssertNoActiveGoal(
+async function lockPiggy(
   tx: Prisma.TransactionClient,
   accountId: string,
-  exceptId?: string,
 ) {
   const lockedAccounts = await tx.$queryRaw<Array<{ id: string }>>`
     SELECT id FROM accounts WHERE id = ${accountId} FOR UPDATE
@@ -65,7 +69,13 @@ async function lockPiggyAndAssertNoActiveGoal(
   if (!account?.isReserved || !account.isActive) {
     throw new AppError(400, 'Selecione um cofrinho ativo');
   }
+}
 
+async function assertNoActiveGoal(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  exceptId?: string,
+) {
   const activeGoalCount = await tx.plan.count({
     where: {
       accountId,
@@ -97,15 +107,9 @@ router.get('/', async (_req, res, next) => {
         const currentAmount = await balanceOf(goal.accountId);
         const targetAmount = Number(goal.targetAmount);
         const achieved = isGoalAchieved(targetAmount, currentAmount);
-        let status = goal.status;
-
-        if (goal.status === PlanStatus.ACTIVE && achieved) {
-          await prisma.plan.update({
-            where: { id: goal.id },
-            data: { status: PlanStatus.ACHIEVED },
-          });
-          status = PlanStatus.ACHIEVED;
-        }
+        const status = goal.status === PlanStatus.ACTIVE && achieved
+          ? PlanStatus.ACHIEVED
+          : goal.status;
 
         const remainingMonths = goal.endDate
           ? monthsRemaining(new Date(), goal.endDate)
@@ -136,13 +140,23 @@ router.post('/', async (req, res, next) => {
   try {
     const data = createGoalSchema.parse(req.body);
     const goal = await prisma.$transaction(async (tx) => {
-      await lockPiggyAndAssertNoActiveGoal(tx, data.accountId);
-      return tx.plan.create({
+      await lockPiggy(tx, data.accountId);
+      await assertNoActiveGoal(tx, data.accountId);
+      const created = await tx.plan.create({
         data: {
           ...data,
           startDate: data.startDate ?? new Date(),
           type: PlanType.GOAL,
         },
+        include: { account: true },
+      });
+      const balance = await balanceOf(data.accountId, tx);
+      const status = isGoalAchieved(data.targetAmount, balance)
+        ? PlanStatus.ACHIEVED
+        : PlanStatus.ACTIVE;
+      return tx.plan.update({
+        where: { id: created.id },
+        data: { status },
         include: { account: true },
       });
     });
@@ -155,52 +169,55 @@ router.post('/', async (req, res, next) => {
 router.patch('/:id', async (req, res, next) => {
   try {
     const data = updateGoalSchema.parse(req.body);
-    const current = await prisma.plan.findFirst({
-      where: { id: req.params.id, type: PlanType.GOAL },
-      include: { account: true },
-    });
-    if (!current || !current.accountId) {
-      throw new AppError(404, 'Objetivo não encontrado');
-    }
-
-    const accountId = data.accountId ?? current.accountId;
-    const targetAmount = data.targetAmount ?? Number(current.targetAmount);
-    const balance = await balanceOf(accountId);
-    const status = isGoalAchieved(targetAmount, balance)
-      ? PlanStatus.ACHIEVED
-      : PlanStatus.ACTIVE;
-
-    const auditEntries = [
-      ...(data.targetAmount !== undefined && data.targetAmount !== Number(current.targetAmount)
-        ? [{
-            planId: current.id,
-            field: 'targetAmount',
-            oldValue: String(Number(current.targetAmount)),
-            newValue: String(data.targetAmount),
-          }]
-        : []),
-      ...(data.endDate !== undefined && dateValue(data.endDate) !== dateValue(current.endDate)
-        ? [{
-            planId: current.id,
-            field: 'endDate',
-            oldValue: dateValue(current.endDate),
-            newValue: dateValue(data.endDate),
-          }]
-        : []),
-    ];
-
     const updated = await prisma.$transaction(async (tx) => {
-      const changesPiggy = data.accountId !== undefined
-        && data.accountId !== current.accountId;
-      if (changesPiggy || status === PlanStatus.ACTIVE) {
-        await lockPiggyAndAssertNoActiveGoal(tx, accountId, current.id);
+      const current = await tx.plan.findFirst({
+        where: { id: req.params.id, type: PlanType.GOAL },
+      });
+      if (!current || !current.accountId) {
+        throw new AppError(404, 'Objetivo não encontrado');
       }
+
+      const accountId = data.accountId ?? current.accountId;
+      await lockPiggy(tx, accountId);
+
+      const auditEntries = [
+        ...(data.targetAmount !== undefined && data.targetAmount !== Number(current.targetAmount)
+          ? [{
+              planId: current.id,
+              field: 'targetAmount',
+              oldValue: String(Number(current.targetAmount)),
+              newValue: String(data.targetAmount),
+            }]
+          : []),
+        ...(data.endDate !== undefined && dateValue(data.endDate) !== dateValue(current.endDate)
+          ? [{
+              planId: current.id,
+              field: 'endDate',
+              oldValue: dateValue(current.endDate),
+              newValue: dateValue(data.endDate),
+            }]
+          : []),
+      ];
+
       if (auditEntries.length > 0) {
         await tx.planAudit.createMany({ data: auditEntries });
       }
+      const changed = await tx.plan.update({
+        where: { id: current.id },
+        data,
+      });
+      const balance = await balanceOf(accountId, tx);
+      const status = isGoalAchieved(Number(changed.targetAmount), balance)
+        ? PlanStatus.ACHIEVED
+        : PlanStatus.ACTIVE;
+      const changesPiggy = data.accountId !== undefined
+        && data.accountId !== current.accountId;
+      if (changesPiggy || status === PlanStatus.ACTIVE) {
+        await assertNoActiveGoal(tx, accountId, current.id);
+      }
       return tx.plan.update({
         where: { id: current.id },
-        data: { ...data, status },
+        data: { status },
         include: { account: true },
       });
     });
