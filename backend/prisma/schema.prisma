@@ -78,6 +78,7 @@ model Account {
   description String?
   isReserved  Boolean @default(false) @map("is_reserved")
   isActive    Boolean @default(true) @map("is_active")
+  isDefault   Boolean @default(false) @map("is_default")
   sortOrder   Int     @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -85,6 +86,7 @@ model Account {
   transactionsFrom Transaction[] @relation("FromAccount")
   transactionsTo   Transaction[] @relation("ToAccount")
   recurrences      Recurrence[]
+  plans            Plan[]
 
   @@map("accounts")
 }
@@ -105,6 +107,7 @@ model Category {
 
   transactions Transaction[]
   budgets      Budget[]
+  budgetTemplateLines BudgetTemplateLine[]
   recurrences  Recurrence[]
   plans        Plan[]
 
@@ -113,13 +116,14 @@ model Category {
 
 model Transaction {
   id          String          @id @default(uuid())
-  date        DateTime        @db.Date
+  date        DateTime
   amount      Decimal         @db.Decimal(12, 2)
   type        TransactionType
   description String
   responsible Responsible?
   notes       String?
   isCancelled Boolean         @default(false) @map("is_cancelled")
+  isOpeningBalance Boolean     @default(false) @map("is_opening_balance")
   cancelledAt DateTime?       @map("cancelled_at")
 
   categoryId  String?         @map("category_id")
@@ -172,6 +176,8 @@ model Budget {
   id          String   @id @default(uuid())
   categoryId  String   @map("category_id")
   category    Category @relation(fields: [categoryId], references: [id])
+  sourceTemplateId String? @map("source_template_id")
+  sourceTemplate   BudgetTemplate? @relation(fields: [sourceTemplateId], references: [id])
   year        Int
   month       Int
   limitAmount Decimal  @db.Decimal(12, 2) @map("limit_amount")
@@ -194,6 +200,9 @@ model Plan {
   periodicAmount Decimal?            @db.Decimal(12, 2) @map("periodic_amount")
   categoryId     String?             @map("category_id")
   category       Category?           @relation(fields: [categoryId], references: [id])
+  accountId      String?             @map("account_id")
+  account        Account?            @relation(fields: [accountId], references: [id])
+  auditLogs      PlanAudit[]
   status         PlanStatus          @default(ACTIVE)
   priority       PlanPriority        @default(MEDIUM)
   createdAt      DateTime            @default(now()) @map("created_at")
@@ -254,4 +263,40 @@ model MonthClosure {
 
   @@unique([year, month])
   @@map("month_closures")
+}
+
+model BudgetTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines   BudgetTemplateLine[]
+  budgets Budget[]
+
+  @@map("budget_templates")
+}
+
+model BudgetTemplateLine {
+  id         String         @id @default(uuid())
+  templateId String         @map("template_id")
+  template   BudgetTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  categoryId String         @map("category_id")
+  category   Category       @relation(fields: [categoryId], references: [id])
+  amount     Decimal        @db.Decimal(12, 2)
+
+  @@unique([templateId, categoryId])
+  @@map("budget_template_lines")
+}
+
+model PlanAudit {
+  id        String   @id @default(uuid())
+  planId    String   @map("plan_id")
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  field     String
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  changedAt DateTime @default(now()) @map("changed_at")
+
+  @@map("plan_audits")
 }

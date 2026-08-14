@@ -28,11 +28,12 @@ async function main() {
   const [contaCorrente, reservaViagem] = await Promise.all([
     prisma.account.upsert({
       where: { id: '00000000-0000-4000-8000-000000000001' },
-      update: {},
+      update: { isDefault: true },
       create: {
         id: '00000000-0000-4000-8000-000000000001',
         name: 'Conta corrente',
         description: 'Conta principal do casal',
+        isDefault: true,
         sortOrder: 1,
       },
     }),
