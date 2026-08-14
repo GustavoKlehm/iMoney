@@ -31,7 +31,13 @@ export function Layout() {
           <GlassNav items={navItems} aria-label="Navegação principal" />
           <div className="header-session">
             <span className="header-session__email">{user?.email}</span>
-            <button className="header-session__sign-out" type="button" onClick={() => void signOut()}>
+            <button
+              className="header-session__sign-out"
+              type="button"
+              onClick={() => {
+                void signOut().catch(() => undefined);
+              }}
+            >
               Sair
             </button>
           </div>

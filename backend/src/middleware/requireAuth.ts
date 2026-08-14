@@ -3,9 +3,14 @@ import type { NextFunction, Request, Response } from 'express';
 import { AppError } from './errorHandler.js';
 
 export async function requireAuth(req: Request, _res: Response, next: NextFunction) {
+  const isHealthRoute =
+    req.path === '/health' ||
+    req.originalUrl === '/api/health' ||
+    req.originalUrl.startsWith('/api/health?');
+
   if (
     req.method === 'GET' &&
-    (req.originalUrl.startsWith('/api/health') || req.path === '/health')
+    isHealthRoute
   ) {
     next();
     return;
