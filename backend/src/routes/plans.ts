@@ -71,7 +71,7 @@ async function lockPiggy(
   }
 }
 
-async function assertNoActiveGoal(
+async function preparePiggySlot(
   tx: Prisma.TransactionClient,
   accountId: string,
   exceptId?: string,
@@ -83,17 +83,22 @@ async function assertNoActiveGoal(
       status: PlanStatus.ACTIVE,
       ...(exceptId ? { id: { not: exceptId } } : {}),
     },
-    select: { targetAmount: true },
+    select: { id: true, targetAmount: true },
   });
   if (activeGoals.length === 0) return;
 
   const balance = await balanceOf(accountId, tx);
-  const hasUnfundedActiveGoal = activeGoals.some(
-    (goal) => !isGoalAchieved(Number(goal.targetAmount), balance),
-  );
+  const fundedGoalIds = activeGoals
+    .filter((goal) => isGoalAchieved(Number(goal.targetAmount), balance))
+    .map((goal) => goal.id);
+  const hasUnfundedActiveGoal = fundedGoalIds.length !== activeGoals.length;
   if (hasUnfundedActiveGoal) {
     throw new AppError(400, 'Este cofrinho já tem um objetivo ativo');
   }
+  await tx.plan.updateMany({
+    where: { id: { in: fundedGoalIds } },
+    data: { status: PlanStatus.ACHIEVED },
+  });
 }
 
 function dateValue(date: Date | null): string | null {
@@ -148,7 +153,7 @@ router.post('/', async (req, res, next) => {
     const data = createGoalSchema.parse(req.body);
     const goal = await prisma.$transaction(async (tx) => {
       await lockPiggy(tx, data.accountId);
-      await assertNoActiveGoal(tx, data.accountId);
+      await preparePiggySlot(tx, data.accountId);
       const created = await tx.plan.create({
         data: {
           ...data,
@@ -220,7 +225,7 @@ router.patch('/:id', async (req, res, next) => {
       const changesPiggy = data.accountId !== undefined
         && data.accountId !== current.accountId;
       if (changesPiggy || status === PlanStatus.ACTIVE) {
-        await assertNoActiveGoal(tx, accountId, current.id);
+        await preparePiggySlot(tx, accountId, current.id);
       }
       return tx.plan.update({
         where: { id: current.id },
