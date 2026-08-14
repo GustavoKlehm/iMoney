@@ -12,6 +12,20 @@
   margin-bottom: 0.5rem;
 }
 
+.budget-plan-detail-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.budget-plan-detail-header__save {
+  min-height: 44px;
+  width: 100%;
+}
+
 .budget-detail-section {
   padding: 1.25rem;
   border-radius: var(--radius-module);
@@ -192,34 +206,6 @@
   border-bottom: 0;
 }
 
-.budget-secondary-button {
-  min-height: 44px;
-  padding: 0.625rem 1rem;
-  border: 1px solid var(--lg-border-soft);
-  border-radius: var(--radius-pill);
-  background: var(--lg-tint-cell);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.budget-secondary-button:hover:not(:disabled) {
-  border-color: var(--lg-border);
-  background: var(--lg-tint-hover);
-}
-
-.budget-secondary-button:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-}
-
-.budget-secondary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 .budget-month__error {
   padding: 0.75rem;
   border: 1px solid rgba(248, 113, 113, 0.28);
@@ -232,18 +218,24 @@
     text-align: left;
   }
 
+  .budget-plan-detail-header__actions {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .budget-plan-detail-header__save {
+    width: auto;
+    min-width: 190px;
+  }
+
   .budget-detail-section {
     padding: 1.5rem;
   }
 
-  .budget-line {
+  .budget-line,
+  .budget-month__limit {
     grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
     align-items: center;
-  }
-
-  .budget-lines-form .btn-submit {
-    justify-self: end;
-    min-width: 190px;
   }
 
   .budget-apply-form {
@@ -258,11 +250,6 @@
   .budget-apply-form .btn-submit {
     justify-self: end;
     min-width: 190px;
-  }
-
-  .budget-month__limit {
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 240px) auto;
-    align-items: center;
   }
 }
 
