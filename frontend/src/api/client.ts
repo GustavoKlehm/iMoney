@@ -1,10 +1,27 @@
+import { supabase } from '../lib/supabase';
+
 export const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
-  });
+  const fetchWithToken = (token?: string) => {
+    const headers = new Headers(options?.headers);
+    headers.set('Content-Type', 'application/json');
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+
+    return fetch(`${API_BASE}${path}`, { ...options, headers });
+  };
+
+  const { data } = await supabase.auth.getSession();
+  let res = await fetchWithToken(data.session?.access_token);
+
+  if (res.status === 401) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    res = await fetchWithToken(refreshed.session?.access_token);
+
+    if (res.status === 401) {
+      await supabase.auth.signOut();
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

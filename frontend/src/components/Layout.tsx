@@ -2,6 +2,7 @@ import { AnimatedOutlet } from './AnimatedOutlet';
 import { AppLogo } from './AppLogo';
 import { GlassNav } from './GlassNav';
 import { WallpaperBackground } from './WallpaperBackground';
+import { useAuth } from '../auth/AuthProvider';
 import './Layout.css';
 
 const navItems = [
@@ -12,6 +13,8 @@ const navItems = [
 ];
 
 export function Layout() {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="layout">
       <WallpaperBackground />
@@ -24,7 +27,15 @@ export function Layout() {
             <span className="tagline">Controle financeiro do casal</span>
           </div>
         </div>
-        <GlassNav items={navItems} aria-label="Navegação principal" />
+        <div className="header-actions">
+          <GlassNav items={navItems} aria-label="Navegação principal" />
+          <div className="header-session">
+            <span className="header-session__email">{user?.email}</span>
+            <button className="header-session__sign-out" type="button" onClick={() => void signOut()}>
+              Sair
+            </button>
+          </div>
+        </div>
       </header>
 
       <main className="main">
