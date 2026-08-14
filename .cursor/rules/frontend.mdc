@@ -1,0 +1,29 @@
+---
+description: Convenções do frontend React/Vite do iMoney
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend iMoney
+
+React 19 + Vite + TypeScript. Sem Tailwind — CSS por componente (`.css` ao lado do `.tsx`).
+
+## Padrões
+
+- Páginas em `frontend/src/pages/`, layout em `components/Layout.tsx`
+- Dados via TanStack Query + `frontend/src/api/client.ts`
+- `API_BASE` = `import.meta.env.VITE_API_URL ?? '/api'`
+- Formatação monetária: `frontend/src/utils/format.ts`
+
+## Estilo
+
+CSS variables em `index.css`: `--primary`, `--success`, `--danger`, `--warning`, `--text`, `--surface`, `--border`, `--bg`.
+
+- Reutilize variáveis existentes; não introduza paleta paralela
+- **UI/UX de telas e componentes:** siga a rule `frontend-ui-ux.mdc` (skill ui-ux-pro-max + responsivo mobile-first)
+
+## Componentes
+
+- Funções nomeadas para páginas (`DashboardPage`, não default export nas pages)
+- `App.tsx` define rotas com React Router v7
+- Erros de API: mensagem via `Error` lançado em `client.ts`

@@ -1,0 +1,60 @@
+---
+description: Toda tela/componente de frontend deve usar ui-ux-pro-max e ser responsiva para celular
+globs: frontend/src/pages/**/*,frontend/src/components/**/*
+alwaysApply: false
+---
+
+# UI/UX obrigatório — telas e componentes
+
+Toda criação, alteração ou revisão de **página** (`pages/`) ou **componente de interface** (`components/`) deve seguir este fluxo.
+
+## 1. Usar a skill ui-ux-pro-max (obrigatório)
+
+Antes de implementar ou refatorar UI, **leia e siga** `.cursor/skills/ui-ux-pro-max/SKILL.md`.
+
+Workflow mínimo:
+
+1. **Nova tela ou redesign amplo** — gerar design system:
+   ```bash
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "personal finance tracker mobile" --design-system -p "iMoney"
+   ```
+2. **Componente ou ajuste pontual** — busca por domínio:
+   ```bash
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "form validation touch" --domain ux
+   python .cursor/skills/ui-ux-pro-max/scripts/search.py "responsive layout" --stack react
+   ```
+3. Aplicar cores, tipografia, espaçamento e checklist da skill — alinhados às CSS variables de `index.css` quando possível.
+
+> No Windows use `python` (não `python3`). Se Python não estiver disponível, siga o conteúdo da SKILL.md sem instalar nada no sistema.
+
+Produto: **Personal Finance Tracker** — app usado no celular para registrar gastos rápidos e no desktop para planejamento.
+
+## 2. Mobile-first e responsivo (obrigatório)
+
+Projete **primeiro para celular**, depois adapte para telas maiores.
+
+Breakpoints mínimos a validar: **375px**, **768px**, **1024px**.
+
+Checklist por tela:
+
+- [ ] Layout funciona em 375px sem scroll horizontal
+- [ ] Áreas clicáveis ≥ 44×44px (botões, links, itens de lista)
+- [ ] Formulários usáveis com teclado virtual (inputs legíveis, labels visíveis)
+- [ ] Tipografia e valores monetários legíveis sem zoom
+- [ ] Navegação acessível no celular (menu/layout não esconde rotas principais)
+- [ ] `cursor: pointer` em elementos clicáveis; estados `:focus-visible` para teclado
+- [ ] Respeitar `prefers-reduced-motion` em animações
+
+Padrões CSS:
+
+- Mobile-first: estilos base para telas estreitas; `@media (min-width: …)` para tablet/desktop
+- Grids/flex com wrap; tabelas largas viram cards ou scroll horizontal **intencional** com indicador
+- Padding e gaps generosos no mobile; evitar hover como única forma de revelar ação
+
+## 3. Entrega
+
+Não considerar a tela pronta sem:
+
+1. Skill consultada (design system ou busca de domínio documentada na implementação)
+2. Layout testado mentalmente ou descrito para 375px e desktop
+3. Checklist de acessibilidade básica da skill (contraste, foco, ícones SVG — não emoji como ícone)

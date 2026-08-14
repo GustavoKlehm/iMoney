@@ -1,0 +1,33 @@
+---
+description: Convenções da API Express + Prisma do iMoney
+globs: backend/**/*
+alwaysApply: false
+---
+
+# Backend iMoney
+
+Express + TypeScript (ESM) + Prisma + Zod. Entry: `src/index.ts`, app: `src/app.ts`.
+
+## API
+
+- Prefixo `/api` — rotas em `src/routes/`
+- Validação de body/query com Zod antes de acessar Prisma
+- Erros centralizados em `src/middleware/errorHandler.ts`
+- CORS: `FRONTEND_URL` ou `http://localhost:5173`
+
+## Prisma
+
+- Schema em `backend/prisma/schema.prisma`
+- Após alterar schema: `npm run db:push` (dev) ou `npm run db:migrate` (produção)
+- Seed: `npm run db:seed`
+- `amount` como Decimal/string no Prisma — converter com cuidado no JSON
+
+## Deploy Vercel
+
+- Serverless entry em `api/index.ts` (raiz do monorepo)
+- Build: `npm run build` gera `backend/dist/` + `frontend/dist/`
+
+## Segurança
+
+- Nunca logar ou retornar connection strings
+- Autenticação ainda não implementada — não assumir multi-tenant

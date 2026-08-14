@@ -1,0 +1,36 @@
+---
+description: Contexto geral do projeto iMoney — stack, domínio e princípios
+alwaysApply: true
+---
+
+# iMoney — Controle Financeiro do Casal
+
+Monorepo npm workspaces: `backend/` + `frontend/`. Node >= 20.
+
+## Domínio
+
+App financeiro doméstico para duas pessoas. Regras de negócio em `especificacao_sistema_financeiro.md`.
+
+- Registrar entradas/saídas imediatamente (valor, categoria, descrição)
+- Diferenciar saldo total, reservado, comprometido e **saldo livre**
+- Orçamento alerta quando próximo/acima do limite — não bloqueia gasto
+- Tipos de lançamento: `INCOME`, `EXPENSE`, `TRANSFER`
+- Responsável: `USER`, `PARTNER`, `COUPLE`
+
+## Idioma e UX
+
+- Interface e labels em **português**
+- Rotas em português: `/lancamentos`, `/lancamentos/novo`, `/categorias`
+- Valores monetários em BRL (R$)
+
+## Ambiente
+
+- Secrets em `backend/.env` (nunca commitar)
+- `DATABASE_URL` (pooling, porta 6543) e `DIRECT_URL` (migrate, porta 5432)
+- API local: `http://localhost:3001/api`
+
+## Ao implementar
+
+- Leia código existente antes de criar abstrações novas
+- Prefira estender rotas/componentes existentes
+- Mantenha tipos sincronizados entre `frontend/src/api/client.ts` e backend
