@@ -1,5 +1,6 @@
 import { AnimatedOutlet } from './AnimatedOutlet';
 import { AppLogo } from './AppLogo';
+import { BackLink } from './BackLink';
 import { ConfirmProvider } from './ConfirmProvider';
 import { GlassNav } from './GlassNav';
 import { WallpaperBackground } from './WallpaperBackground';
@@ -50,6 +51,7 @@ export function Layout() {
 
       <main className="main">
         <ConfirmProvider>
+          <BackLink />
           <AnimatedOutlet />
         </ConfirmProvider>
       </main>

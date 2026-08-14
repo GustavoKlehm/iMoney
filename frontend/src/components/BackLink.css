@@ -1,0 +1,44 @@
+.back-link.liquid-glass {
+  display: inline-flex;
+  width: max-content;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 1.125rem;
+  padding: 0 1.05rem 0 0.85rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: rgba(26, 11, 46, 0.64);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.back-link.liquid-glass:hover {
+  border-color: var(--lg-border);
+  background: rgba(26, 11, 46, 0.72);
+}
+
+.back-link.liquid-glass:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-link.liquid-glass {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .back-link.liquid-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(45, 27, 78, 0.94);
+  }
+}

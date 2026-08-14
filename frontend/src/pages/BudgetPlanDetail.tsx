@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api, type ApplyBudgetResult, type BudgetPeriod } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
@@ -249,10 +249,6 @@ export function BudgetPlanDetailPage() {
 
   return (
     <div className="budget-plan-detail-page">
-      <Link to="/planejamentos" className="budget-plan-back">
-        Voltar para planejamentos
-      </Link>
-
       <header className="page-header budget-plan-detail-header">
         <div>
           <h1>{template.name}</h1>

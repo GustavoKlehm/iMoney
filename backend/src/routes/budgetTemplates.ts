@@ -8,8 +8,8 @@ import { AppError } from '../middleware/errorHandler.js';
 const router = Router();
 
 const lineSchema = z.object({
-  categoryId: z.string().uuid(),
-  amount: z.number().nonnegative(),
+  categoryId: z.string().min(1),
+  amount: z.coerce.number().nonnegative(),
 });
 
 const createTemplateSchema = z.object({
@@ -20,9 +20,9 @@ const createTemplateSchema = z.object({
 const updateTemplateSchema = createTemplateSchema.partial();
 
 const applyTemplateSchema = z.object({
-  startYear: z.number().int(),
-  startMonth: z.number().int().min(1).max(12),
-  months: z.number().int().min(1).max(36),
+  startYear: z.coerce.number().int(),
+  startMonth: z.coerce.number().int().min(1).max(12),
+  months: z.coerce.number().int().min(1).max(36),
   overwrite: z.boolean(),
 });
 

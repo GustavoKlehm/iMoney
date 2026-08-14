@@ -125,8 +125,6 @@ export function GoalDetailPage() {
 
   return (
     <div className="goal-detail-page">
-      <Link to="/objetivos" className="goal-detail-back">Voltar para objetivos</Link>
-
       <header className="page-header goal-detail-header">
         <div>
           <div className="goal-detail-title">

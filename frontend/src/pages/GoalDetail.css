@@ -3,23 +3,6 @@
   gap: 1rem;
 }
 
-.goal-detail-back {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-self: start;
-  border-radius: var(--radius-sm);
-  color: var(--primary);
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.goal-detail-back:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-}
-
 .goal-detail-header {
   display: flex;
   flex-direction: column;

@@ -3,23 +3,6 @@
   gap: 1rem;
 }
 
-.budget-plan-back {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  justify-self: start;
-  color: var(--primary);
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.budget-plan-back:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-  border-radius: var(--radius-sm);
-}
-
 .budget-plan-detail-header {
   display: flex;
   flex-wrap: wrap;
