@@ -15,6 +15,18 @@ const createAccountSchema = z.object({
   openingBalance: z.number().nonnegative().optional(),
 });
 
+async function findAccountOrThrow(accountId: string) {
+  const account = await prisma.account.findUnique({
+    where: { id: accountId },
+  });
+
+  if (!account) {
+    throw new AppError(404, 'Conta não encontrada');
+  }
+
+  return account;
+}
+
 async function sumParts(accountId: string) {
   const [incoming, outgoing, transfersIn, transfersOut] = await Promise.all([
     prisma.transaction.aggregate({
@@ -104,6 +116,7 @@ router.post('/', async (req, res, next) => {
 router.get('/:id/balance', async (req, res, next) => {
   try {
     const accountId = req.params.id;
+    await findAccountOrThrow(accountId);
     res.json({ accountId, ...(await sumParts(accountId)) });
   } catch (error) {
     next(error);
@@ -112,9 +125,7 @@ router.get('/:id/balance', async (req, res, next) => {
 
 router.post('/:id/default', async (req, res, next) => {
   try {
-    const account = await prisma.account.findUniqueOrThrow({
-      where: { id: req.params.id },
-    });
+    const account = await findAccountOrThrow(req.params.id);
 
     if (!canBeDefault(account)) {
       throw new AppError(400, 'Cofrinho ou conta inativa não pode ser padrão');
@@ -144,9 +155,7 @@ router.patch('/:id', async (req, res, next) => {
       .partial()
       .extend({ isActive: z.boolean().optional() })
       .parse(req.body);
-    const current = await prisma.account.findUniqueOrThrow({
-      where: { id: req.params.id },
-    });
+    const current = await findAccountOrThrow(req.params.id);
 
     if (data.isReserved === true && current.isDefault) {
       throw new AppError(400, 'Conta padrão não pode virar cofrinho');
