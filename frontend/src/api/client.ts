@@ -42,6 +42,10 @@ export const api = {
     list: () => request<Category[]>('/categories'),
     create: (data: CreateCategory) =>
       request<Category>('/categories', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<CreateCategory> & { isActive?: boolean }) =>
+      request<Category>(`/categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    remove: (id: string) =>
+      request<void>(`/categories/${id}`, { method: 'DELETE' }),
   },
 
   accounts: {
