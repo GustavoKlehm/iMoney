@@ -94,7 +94,8 @@ body {
 .category-group,
 .tx-form,
 .page-loading,
-.glass-module {
+.glass-module,
+.app-logo-wrap {
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -115,7 +116,8 @@ body {
 .category-group::before,
 .tx-form::before,
 .page-loading::before,
-.glass-module::before {
+.glass-module::before,
+.app-logo-wrap::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -150,7 +152,8 @@ body {
 .category-group::after,
 .tx-form::after,
 .page-loading::after,
-.glass-module::after {
+.glass-module::after,
+.app-logo-wrap::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -172,7 +175,8 @@ body {
 .tx-form > *,
 .page-loading > *,
 .page-error > *,
-.glass-module > * {
+.glass-module > *,
+.app-logo-wrap > * {
   position: relative;
   z-index: 1;
 }
@@ -381,7 +385,8 @@ body {
   .category-group,
   .tx-form,
   .page-loading,
-  .glass-module {
+  .glass-module,
+  .app-logo-wrap {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: rgba(45, 27, 78, 0.94);

@@ -1,31 +1,53 @@
-.app-logo {
-  display: block;
-  object-fit: contain;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 4px 16px rgba(26, 11, 46, 0.25);
+.app-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  padding: 5px;
 }
 
-.app-logo--xs {
+.app-logo-wrap--xs {
   width: 28px;
   height: 28px;
   border-radius: 8px;
+  padding: 3px;
 }
 
-.app-logo--sm {
+.app-logo-wrap--sm {
   width: 40px;
   height: 40px;
+  border-radius: 10px;
+  padding: 4px;
 }
 
-.app-logo--md {
+.app-logo-wrap--md {
   width: 56px;
   height: 56px;
-  border-radius: 14px;
+  border-radius: 12px;
+  padding: 5px;
 }
 
-.app-logo--lg {
+.app-logo-wrap--lg {
   width: 80px;
   height: 80px;
-  border-radius: 18px;
+  border-radius: 14px;
+  padding: 6px;
+}
+
+.app-logo__img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-logo-wrap {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(45, 27, 78, 0.94);
+  }
 }
