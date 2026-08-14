@@ -6,6 +6,7 @@ import transactionsRoutes from './transactions.js';
 import dashboardRoutes from './dashboard.js';
 import budgetTemplatesRoutes from './budgetTemplates.js';
 import budgetsRoutes from './budgets.js';
+import plansRoutes from './plans.js';
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use('/transactions', transactionsRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/budget-templates', budgetTemplatesRoutes);
 router.use('/budgets', budgetsRoutes);
+router.use('/plans', plansRoutes);
 
 export default router;

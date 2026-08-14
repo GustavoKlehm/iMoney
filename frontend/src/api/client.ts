@@ -102,6 +102,14 @@ export const api = {
         body: JSON.stringify(data),
       }),
   },
+
+  plans: {
+    listGoals: () => request<Goal[]>('/plans?type=GOAL'),
+    createGoal: (data: CreateGoal) =>
+      request<Goal>('/plans', { method: 'POST', body: JSON.stringify(data) }),
+    updateGoal: (id: string, data: UpdateGoal) =>
+      request<Goal>(`/plans/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -232,6 +240,35 @@ export interface ApplyBudgetResult {
   created: number;
   skipped: number;
 }
+
+export type PlanStatus = 'ACTIVE' | 'ACHIEVED' | 'PAUSED' | 'CANCELLED' | 'CLOSED';
+
+export interface Goal {
+  id: string;
+  name: string;
+  type: 'GOAL';
+  accountId: string;
+  account: Account;
+  targetAmount: number;
+  currentAmount: number;
+  startDate: string;
+  endDate: string;
+  status: PlanStatus;
+  remaining: number;
+  progress: number;
+  monthsRemaining: number | null;
+  monthlyReserve: number;
+}
+
+export interface CreateGoal {
+  name: string;
+  accountId: string;
+  targetAmount: number;
+  startDate?: string;
+  endDate: string;
+}
+
+export type UpdateGoal = Partial<Omit<CreateGoal, 'startDate'>>;
 
 export interface BudgetProgress {
   category: Category;

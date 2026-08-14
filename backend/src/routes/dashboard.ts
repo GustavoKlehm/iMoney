@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
+import { accountBalance } from '../lib/accountBalance.js';
 import { prisma } from '../lib/prisma.js';
 
 const router = Router();
@@ -101,11 +102,12 @@ router.get('/monthly', async (req, res, next) => {
           }),
         ]);
 
-        const balance =
-          Number(inc._sum.amount ?? 0) -
-          Number(exp._sum.amount ?? 0) +
-          Number(tIn._sum.amount ?? 0) -
-          Number(tOut._sum.amount ?? 0);
+        const balance = accountBalance({
+          income: Number(inc._sum.amount ?? 0),
+          expense: Number(exp._sum.amount ?? 0),
+          transferIn: Number(tIn._sum.amount ?? 0),
+          transferOut: Number(tOut._sum.amount ?? 0),
+        });
 
         return { ...account, balance };
       }),
@@ -116,6 +118,9 @@ router.get('/monthly', async (req, res, next) => {
       .reduce((sum, a) => sum + a.balance, 0);
 
     const totalBalance = accountBalances.reduce((sum, a) => sum + a.balance, 0);
+    const balanceByAccount = new Map(
+      accountBalances.map((account) => [account.id, account.balance]),
+    );
 
     const upcomingOccurrences = await prisma.recurrenceOccurrence.findMany({
       where: {
@@ -145,15 +150,21 @@ router.get('/monthly', async (req, res, next) => {
       budgetProgress,
       accountBalances,
       upcomingOccurrences,
-      activePlans: activePlans.map((p) => ({
-        ...p,
-        targetAmount: Number(p.targetAmount),
-        currentAmount: Number(p.currentAmount),
-        remaining: Number(p.targetAmount) - Number(p.currentAmount),
-        progress: Number(p.targetAmount) > 0
-          ? Math.round((Number(p.currentAmount) / Number(p.targetAmount)) * 1000) / 10
-          : 0,
-      })),
+      activePlans: activePlans.map((p) => {
+        const targetAmount = Number(p.targetAmount);
+        const currentAmount = p.type === 'GOAL' && p.accountId
+          ? balanceByAccount.get(p.accountId) ?? 0
+          : Number(p.currentAmount);
+        return {
+          ...p,
+          targetAmount,
+          currentAmount,
+          remaining: targetAmount - currentAmount,
+          progress: targetAmount > 0
+            ? Math.round((currentAmount / targetAmount) * 1000) / 10
+            : 0,
+        };
+      }),
     });
   } catch (error) {
     next(error);

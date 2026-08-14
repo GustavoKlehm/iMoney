@@ -10,6 +10,8 @@ import { AccountsPage } from './pages/Accounts';
 import { LoginPage } from './pages/Login';
 import { BudgetPlansPage } from './pages/BudgetPlans';
 import { BudgetPlanDetailPage } from './pages/BudgetPlanDetail';
+import { GoalsPage } from './pages/Goals';
+import { GoalDetailPage } from './pages/GoalDetail';
 
 function ProtectedRoutes() {
   const { session, loading } = useAuth();
@@ -36,6 +38,8 @@ function App() {
               <Route path="categorias" element={<CategoriesPage />} />
               <Route path="planejamentos" element={<BudgetPlansPage />} />
               <Route path="planejamentos/:id" element={<BudgetPlanDetailPage />} />
+              <Route path="objetivos" element={<GoalsPage />} />
+              <Route path="objetivos/:id" element={<GoalDetailPage />} />
             </Route>
           </Route>
         </Routes>
