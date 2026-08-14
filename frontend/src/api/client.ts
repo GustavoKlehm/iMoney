@@ -46,6 +46,12 @@ export const api = {
 
   accounts: {
     list: () => request<Account[]>('/accounts'),
+    create: (data: CreateAccount) =>
+      request<Account>('/accounts', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<CreateAccount> & { isActive?: boolean }) =>
+      request<Account>(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    setDefault: (id: string) =>
+      request<Account>(`/accounts/${id}/default`, { method: 'POST' }),
   },
 
   transactions: {
@@ -83,7 +89,16 @@ export interface Account {
   name: string;
   description: string | null;
   isReserved: boolean;
+  isDefault: boolean;
+  isActive: boolean;
   balance?: number;
+}
+
+export interface CreateAccount {
+  name: string;
+  description?: string;
+  isReserved?: boolean;
+  openingBalance?: number;
 }
 
 export interface Transaction {

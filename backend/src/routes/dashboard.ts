@@ -24,7 +24,12 @@ router.get('/monthly', async (req, res, next) => {
 
     const [incomeAgg, expenseAgg, budgets, expensesByCategory] = await Promise.all([
       prisma.transaction.aggregate({
-        where: { date: { gte: start, lte: end }, type: TransactionType.INCOME, isCancelled: false },
+        where: {
+          date: { gte: start, lte: end },
+          type: TransactionType.INCOME,
+          isCancelled: false,
+          isOpeningBalance: false,
+        },
         _sum: { amount: true },
       }),
       prisma.transaction.aggregate({

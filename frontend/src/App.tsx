@@ -5,6 +5,8 @@ import { DashboardPage } from './pages/Dashboard';
 import { TransactionsPage } from './pages/Transactions';
 import { NewTransactionPage } from './pages/NewTransaction';
 import { CategoriesPage } from './pages/Categories';
+import { CadastrosPage } from './pages/Cadastros';
+import { AccountsPage } from './pages/Accounts';
 import { LoginPage } from './pages/Login';
 
 function ProtectedRoutes() {
@@ -27,6 +29,8 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="lancamentos" element={<TransactionsPage />} />
               <Route path="lancamentos/novo" element={<NewTransactionPage />} />
+              <Route path="cadastros" element={<CadastrosPage />} />
+              <Route path="contas" element={<AccountsPage />} />
               <Route path="categorias" element={<CategoriesPage />} />
             </Route>
           </Route>

@@ -8,8 +8,11 @@ import './Layout.css';
 const navItems = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/lancamentos', label: 'Lançamentos' },
-  { to: '/lancamentos/novo', label: '+ Gasto' },
-  { to: '/categorias', label: 'Categorias' },
+  {
+    to: '/cadastros',
+    label: 'Cadastros',
+    matchPrefix: ['/cadastros', '/contas', '/categorias', '/planejamentos', '/objetivos'],
+  },
 ];
 
 export function Layout() {

@@ -6,6 +6,7 @@ export type GlassNavItem = {
   to: string;
   label: string;
   end?: boolean;
+  matchPrefix?: string[];
 };
 
 type ThumbRect = {
@@ -71,7 +72,16 @@ export function GlassNav({ items, 'aria-label': ariaLabel }: GlassNavProps) {
           key={item.to}
           to={item.to}
           end={item.end}
-          className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          className={({ isActive }) => {
+            const matches = item.matchPrefix
+              ? item.matchPrefix.some(
+                  (prefix) =>
+                    location.pathname === prefix ||
+                    location.pathname.startsWith(`${prefix}/`),
+                )
+              : isActive;
+            return matches ? 'nav-link active' : 'nav-link';
+          }}
         >
           {item.label}
         </NavLink>
