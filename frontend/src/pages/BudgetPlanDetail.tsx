@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { api, type ApplyBudgetResult, type BudgetPeriod } from '../api/client';
@@ -17,6 +17,7 @@ function periodLabel(period: BudgetPeriod) {
 function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
   const queryClient = useQueryClient();
   const [values, setValues] = useState<Record<string, string>>({});
+  const dirtyBudgetIds = useRef(new Set<string>());
 
   const budgetsQuery = useQuery({
     queryKey: ['budgets', period.year, period.month],
@@ -25,9 +26,14 @@ function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
 
   useEffect(() => {
     if (!budgetsQuery.data) return;
-    setValues(
+    setValues((current) =>
       Object.fromEntries(
-        budgetsQuery.data.map((budget) => [budget.id, String(Number(budget.limitAmount))]),
+        budgetsQuery.data.map((budget) => [
+          budget.id,
+          dirtyBudgetIds.current.has(budget.id)
+            ? current[budget.id] ?? String(Number(budget.limitAmount))
+            : String(Number(budget.limitAmount)),
+        ]),
       ),
     );
   }, [budgetsQuery.data]);
@@ -35,10 +41,16 @@ function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
   const updateBudget = useMutation({
     mutationFn: ({ id, limitAmount }: { id: string; limitAmount: number }) =>
       api.budgets.update(id, { limitAmount }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
+    onSuccess: async (budget) => {
+      dirtyBudgetIds.current.delete(budget.id);
+      setValues((current) => ({
+        ...current,
+        [budget.id]: String(Number(budget.limitAmount)),
+      }));
+      await queryClient.invalidateQueries({
         queryKey: ['budgets', period.year, period.month],
-      }),
+      });
+    },
   });
 
   if (budgetsQuery.isLoading) {
@@ -75,12 +87,13 @@ function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
                 min="0.01"
                 step="0.01"
                 value={values[budget.id] ?? ''}
-                onChange={(event) =>
+                onChange={(event) => {
+                  dirtyBudgetIds.current.add(budget.id);
                   setValues((current) => ({
                     ...current,
                     [budget.id]: event.target.value,
-                  }))
-                }
+                  }));
+                }}
               />
             </div>
             <button
@@ -156,13 +169,15 @@ export function BudgetPlanDetailPage() {
     );
   }, [templateQuery.data]);
 
+  const templateLines = expenseChildren.map((category) => ({
+    categoryId: category.id,
+    amount: Number(lineValues[category.id]) || 0,
+  }));
+
   const saveLines = useMutation({
     mutationFn: () =>
       api.budgetTemplates.update(id, {
-        lines: expenseChildren.map((category) => ({
-          categoryId: category.id,
-          amount: Number(lineValues[category.id]) || 0,
-        })),
+        lines: templateLines,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['budget-template', id] });
@@ -171,8 +186,9 @@ export function BudgetPlanDetailPage() {
   });
 
   const applyTemplate = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const [year, month] = startPeriod.split('-').map(Number);
+      await api.budgetTemplates.update(id, { lines: templateLines });
       return api.budgetTemplates.apply(id, {
         startYear: year,
         startMonth: month,
@@ -270,7 +286,11 @@ export function BudgetPlanDetailPage() {
                 </label>
               ))}
             </div>
-            <button className="btn-submit" type="submit" disabled={saveLines.isPending}>
+            <button
+              className="btn-submit"
+              type="submit"
+              disabled={saveLines.isPending || applyTemplate.isPending}
+            >
               {saveLines.isPending ? 'Salvando molde...' : 'Salvar limites'}
             </button>
           </form>
@@ -330,9 +350,11 @@ export function BudgetPlanDetailPage() {
           <button
             className="btn-submit"
             type="submit"
-            disabled={applyTemplate.isPending || !startPeriod || !validMonths}
+            disabled={
+              applyTemplate.isPending || saveLines.isPending || !startPeriod || !validMonths
+            }
           >
-            {applyTemplate.isPending ? 'Gerando...' : 'Gerar meses'}
+            {applyTemplate.isPending ? 'Salvando e gerando...' : 'Gerar meses'}
           </button>
         </form>
 
