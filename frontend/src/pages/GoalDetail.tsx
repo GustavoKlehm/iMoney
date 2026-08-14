@@ -46,12 +46,20 @@ export function GoalDetailPage() {
 
   const updateGoal = useMutation({
     mutationFn: (currentGoal: Goal) =>
-      api.plans.updateGoal(currentGoal.id, {
-        name: name.trim(),
-        accountId,
-        targetAmount: Number(targetAmount),
-        endDate,
-      }),
+      api.plans.updateGoal(
+        currentGoal.id,
+        editorMode === 'raise'
+          ? {
+              targetAmount: Number(targetAmount),
+              endDate,
+            }
+          : {
+              name: name.trim(),
+              accountId,
+              targetAmount: Number(targetAmount),
+              endDate,
+            },
+      ),
     onSuccess: async () => {
       setEditorMode(null);
       await Promise.all([
@@ -81,9 +89,9 @@ export function GoalDetailPage() {
   const releaseGoal = defaultAccount
     ? `/lancamentos/novo?type=TRANSFER&accountId=${encodeURIComponent(goal.accountId)}&toAccountId=${encodeURIComponent(defaultAccount.id)}`
     : '';
-  const validForm = Boolean(
-    name.trim() && accountId && Number(targetAmount) > 0 && endDate,
-  );
+  const validForm = editorMode === 'raise'
+    ? Boolean(Number(targetAmount) > 0 && endDate)
+    : Boolean(name.trim() && accountId && Number(targetAmount) > 0 && endDate);
 
   function openEditor(mode: Exclude<EditorMode, null>) {
     if (!goal) return;
@@ -192,29 +200,33 @@ export function GoalDetailPage() {
           </div>
 
           <form className="goal-editor__form" onSubmit={handleSubmit}>
-            <div className="glass-field">
-              <label htmlFor="goal-edit-name">Nome</label>
-              <input
-                id="goal-edit-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={100}
-                required
-              />
-            </div>
-            <div className="glass-field">
-              <label htmlFor="goal-edit-account">Cofrinho</label>
-              <select
-                id="goal-edit-account"
-                value={accountId}
-                onChange={(event) => setAccountId(event.target.value)}
-                required
-              >
-                {reservedAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name}</option>
-                ))}
-              </select>
-            </div>
+            {editorMode === 'edit' && (
+              <>
+                <div className="glass-field">
+                  <label htmlFor="goal-edit-name">Nome</label>
+                  <input
+                    id="goal-edit-name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    maxLength={100}
+                    required
+                  />
+                </div>
+                <div className="glass-field">
+                  <label htmlFor="goal-edit-account">Cofrinho</label>
+                  <select
+                    id="goal-edit-account"
+                    value={accountId}
+                    onChange={(event) => setAccountId(event.target.value)}
+                    required
+                  >
+                    {reservedAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>{account.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
             <div className="glass-field">
               <label htmlFor="goal-edit-target">Valor-alvo (R$)</label>
               <input

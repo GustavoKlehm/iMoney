@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { PlanStatus, PlanType, TransactionType } from '@prisma/client';
+import { PlanStatus, PlanType, Prisma, TransactionType } from '@prisma/client';
 import { z } from 'zod';
 import { accountBalance } from '../lib/accountBalance.js';
 import { isGoalAchieved, monthlyReserve, monthsRemaining } from '../lib/goal.js';
@@ -51,17 +51,22 @@ async function balanceOf(accountId: string): Promise<number> {
   });
 }
 
-async function reservedAccountOrThrow(accountId: string) {
-  const account = await prisma.account.findUnique({ where: { id: accountId } });
-  if (!account) throw new AppError(404, 'Cofrinho não encontrado');
-  if (!account.isReserved || !account.isActive) {
+async function lockPiggyAndAssertNoActiveGoal(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  exceptId?: string,
+) {
+  const lockedAccounts = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM accounts WHERE id = ${accountId} FOR UPDATE
+  `;
+  if (lockedAccounts.length === 0) throw new AppError(404, 'Cofrinho não encontrado');
+
+  const account = await tx.account.findUnique({ where: { id: accountId } });
+  if (!account?.isReserved || !account.isActive) {
     throw new AppError(400, 'Selecione um cofrinho ativo');
   }
-  return account;
-}
 
-async function assertNoActiveGoal(accountId: string, exceptId?: string) {
-  const activeGoal = await prisma.plan.findFirst({
+  const activeGoalCount = await tx.plan.count({
     where: {
       accountId,
       type: PlanType.GOAL,
@@ -69,7 +74,7 @@ async function assertNoActiveGoal(accountId: string, exceptId?: string) {
       ...(exceptId ? { id: { not: exceptId } } : {}),
     },
   });
-  if (activeGoal) {
+  if (activeGoalCount > 0) {
     throw new AppError(400, 'Este cofrinho já tem um objetivo ativo');
   }
 }
@@ -130,16 +135,16 @@ router.get('/', async (_req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const data = createGoalSchema.parse(req.body);
-    await reservedAccountOrThrow(data.accountId);
-    await assertNoActiveGoal(data.accountId);
-
-    const goal = await prisma.plan.create({
-      data: {
-        ...data,
-        startDate: data.startDate ?? new Date(),
-        type: PlanType.GOAL,
-      },
-      include: { account: true },
+    const goal = await prisma.$transaction(async (tx) => {
+      await lockPiggyAndAssertNoActiveGoal(tx, data.accountId);
+      return tx.plan.create({
+        data: {
+          ...data,
+          startDate: data.startDate ?? new Date(),
+          type: PlanType.GOAL,
+        },
+        include: { account: true },
+      });
     });
     res.status(201).json(goal);
   } catch (error) {
@@ -159,22 +164,11 @@ router.patch('/:id', async (req, res, next) => {
     }
 
     const accountId = data.accountId ?? current.accountId;
-    if (data.accountId !== undefined) {
-      await reservedAccountOrThrow(data.accountId);
-      if (data.accountId !== current.accountId) {
-        await assertNoActiveGoal(data.accountId, current.id);
-      }
-    }
-
     const targetAmount = data.targetAmount ?? Number(current.targetAmount);
     const balance = await balanceOf(accountId);
     const status = isGoalAchieved(targetAmount, balance)
       ? PlanStatus.ACHIEVED
       : PlanStatus.ACTIVE;
-
-    if (status === PlanStatus.ACTIVE) {
-      await assertNoActiveGoal(accountId, current.id);
-    }
 
     const auditEntries = [
       ...(data.targetAmount !== undefined && data.targetAmount !== Number(current.targetAmount)
@@ -196,6 +190,11 @@ router.patch('/:id', async (req, res, next) => {
     ];
 
     const updated = await prisma.$transaction(async (tx) => {
+      const changesPiggy = data.accountId !== undefined
+        && data.accountId !== current.accountId;
+      if (changesPiggy || status === PlanStatus.ACTIVE) {
+        await lockPiggyAndAssertNoActiveGoal(tx, accountId, current.id);
+      }
       if (auditEntries.length > 0) {
         await tx.planAudit.createMany({ data: auditEntries });
       }
