@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, type TransactionType } from '../api/client';
 import { AppLogo } from '../components/AppLogo';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import './NewTransaction.css';
 
@@ -33,7 +34,7 @@ export function NewTransactionPage() {
   const editingId = searchParams.get('id');
 
   const [type, setType] = useState<TransactionType>(() => getInitialType(searchParams.get('type')));
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [accountId, setAccountId] = useState(() => searchParams.get('accountId') ?? '');
@@ -73,7 +74,7 @@ export function NewTransactionPage() {
     if (!transactionQuery.data || filled) return;
     const transaction = transactionQuery.data;
     setType(transaction.type);
-    setAmount(String(Number(transaction.amount)));
+    setAmount(Number(transaction.amount));
     setDescription(transaction.description);
     setCategoryId(transaction.category?.id ?? '');
     setAccountId(transaction.account?.id ?? '');
@@ -126,12 +127,11 @@ export function NewTransactionPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsedAmount = parseFloat(amount.replace(',', '.'));
-    if (!parsedAmount || !description.trim() || !date || !accountId) return;
+    if (!amount || !description.trim() || !date || !accountId) return;
 
     const baseTransaction = {
       date,
-      amount: parsedAmount,
+      amount,
       type,
       description: description.trim(),
       accountId,
@@ -196,13 +196,10 @@ export function NewTransactionPage() {
 
         <div className="form-group amount-group">
           <label htmlFor="amount">Valor (R$)</label>
-          <input
+          <MoneyInput
             id="amount"
-            type="text"
-            inputMode="decimal"
-            placeholder="0,00"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             autoFocus
             required
           />

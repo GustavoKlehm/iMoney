@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type ApplyBudgetResult, type BudgetPeriod } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
@@ -17,43 +18,18 @@ function periodLabel(period: BudgetPeriod) {
   return `${MONTH_NAMES[period.month - 1]} de ${period.year}`;
 }
 
-function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
-  const queryClient = useQueryClient();
-  const [values, setValues] = useState<Record<string, string>>({});
-  const dirtyBudgetIds = useRef(new Set<string>());
-
+function MonthBudgetEditor({
+  period,
+  drafts,
+  onDraftChange,
+}: {
+  period: BudgetPeriod;
+  drafts: Record<string, number>;
+  onDraftChange: (budgetId: string, amount: number) => void;
+}) {
   const budgetsQuery = useQuery({
     queryKey: ['budgets', period.year, period.month],
     queryFn: () => api.budgets.list(period.year, period.month),
-  });
-
-  useEffect(() => {
-    if (!budgetsQuery.data) return;
-    setValues((current) =>
-      Object.fromEntries(
-        budgetsQuery.data.map((budget) => [
-          budget.id,
-          dirtyBudgetIds.current.has(budget.id)
-            ? current[budget.id] ?? String(Number(budget.limitAmount))
-            : String(Number(budget.limitAmount)),
-        ]),
-      ),
-    );
-  }, [budgetsQuery.data]);
-
-  const updateBudget = useMutation({
-    mutationFn: ({ id, limitAmount }: { id: string; limitAmount: number }) =>
-      api.budgets.update(id, { limitAmount }),
-    onSuccess: async (budget) => {
-      dirtyBudgetIds.current.delete(budget.id);
-      setValues((current) => ({
-        ...current,
-        [budget.id]: String(Number(budget.limitAmount)),
-      }));
-      await queryClient.invalidateQueries({
-        queryKey: ['budgets', period.year, period.month],
-      });
-    },
   });
 
   if (budgetsQuery.isLoading) {
@@ -75,48 +51,19 @@ function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
 
   return (
     <div className="budget-month__limits">
-      {budgets.map((budget) => {
-        const parsedValue = Number(values[budget.id]);
-        const canSave = Number.isFinite(parsedValue) && parsedValue > 0;
-        return (
-          <div key={budget.id} className="budget-month__limit">
-            <label htmlFor={`budget-${budget.id}`}>{budget.category.name}</label>
-            <div className="budget-money-field">
-              <span aria-hidden="true">R$</span>
-              <input
-                id={`budget-${budget.id}`}
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="0.01"
-                value={values[budget.id] ?? ''}
-                onChange={(event) => {
-                  dirtyBudgetIds.current.add(budget.id);
-                  setValues((current) => ({
-                    ...current,
-                    [budget.id]: event.target.value,
-                  }));
-                }}
-              />
-            </div>
-            <button
-              type="button"
-              className="budget-secondary-button"
-              disabled={updateBudget.isPending || !canSave}
-              onClick={() => updateBudget.mutate({ id: budget.id, limitAmount: parsedValue })}
-            >
-              {updateBudget.isPending && updateBudget.variables?.id === budget.id
-                ? 'Salvando...'
-                : 'Salvar'}
-            </button>
+      {budgets.map((budget) => (
+        <div key={budget.id} className="budget-month__limit">
+          <label htmlFor={`budget-${budget.id}`}>{budget.category.name}</label>
+          <div className="budget-money-field">
+            <span aria-hidden="true">R$</span>
+            <MoneyInput
+              id={`budget-${budget.id}`}
+              value={drafts[budget.id] ?? Number(budget.limitAmount)}
+              onChange={(nextValue) => onDraftChange(budget.id, nextValue)}
+            />
           </div>
-        );
-      })}
-      {updateBudget.error && (
-        <p className="budget-month__error" role="alert">
-          Erro: {(updateBudget.error as Error).message}
-        </p>
-      )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -127,7 +74,8 @@ export function BudgetPlanDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentPeriod = getCurrentPeriod();
-  const [lineValues, setLineValues] = useState<Record<string, string>>({});
+  const [lineValues, setLineValues] = useState<Record<string, number>>({});
+  const [monthDrafts, setMonthDrafts] = useState<Record<string, number>>({});
   const [startPeriod, setStartPeriod] = useState(periodKey(currentPeriod));
   const [months, setMonths] = useState('3');
   const [overwrite, setOverwrite] = useState(false);
@@ -168,7 +116,7 @@ export function BudgetPlanDetailPage() {
       Object.fromEntries(
         templateQuery.data.lines.map((line) => [
           line.categoryId,
-          Number(line.amount) === 0 ? '' : String(Number(line.amount)),
+          Number(line.amount),
         ]),
       ),
     );
@@ -176,17 +124,27 @@ export function BudgetPlanDetailPage() {
 
   const templateLines = expenseChildren.map((category) => ({
     categoryId: category.id,
-    amount: Number(lineValues[category.id]) || 0,
+    amount: lineValues[category.id] || 0,
   }));
 
-  const saveLines = useMutation({
-    mutationFn: () =>
-      api.budgetTemplates.update(id, {
-        lines: templateLines,
-      }),
+  const savePlan = useMutation({
+    mutationFn: async (input: {
+      lines: { categoryId: string; amount: number }[];
+      drafts: Record<string, number>;
+    }) => {
+      await api.budgetTemplates.update(id, { lines: input.lines });
+      const monthUpdates = Object.entries(input.drafts).filter(([, amount]) => amount > 0);
+      await Promise.all(
+        monthUpdates.map(([budgetId, limitAmount]) =>
+          api.budgets.update(budgetId, { limitAmount }),
+        ),
+      );
+    },
     onSuccess: async () => {
+      setMonthDrafts({});
       await queryClient.invalidateQueries({ queryKey: ['budget-template', id] });
       await queryClient.invalidateQueries({ queryKey: ['budget-templates'] });
+      await queryClient.invalidateQueries({ queryKey: ['budgets'] });
     },
   });
 
@@ -217,9 +175,8 @@ export function BudgetPlanDetailPage() {
     },
   });
 
-  function handleSaveLines(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    saveLines.mutate();
+  function handleSavePlan() {
+    savePlan.mutate({ lines: templateLines, drafts: monthDrafts });
   }
 
   function handleApply(event: FormEvent<HTMLFormElement>) {
@@ -254,23 +211,38 @@ export function BudgetPlanDetailPage() {
           <h1>{template.name}</h1>
           <p className="subtitle">Defina o molde, gere os meses e ajuste exceções</p>
         </div>
-        <ItemActions
-          name={template.name}
-          actions={[
-            {
-              id: 'remove',
-              label: 'Excluir',
-              danger: true,
-              disabled: removeTemplate.isPending,
-              onSelect: () => {
-                void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
-                  if (ok) removeTemplate.mutate();
-                });
+        <div className="budget-plan-detail-header__actions">
+          <button
+            type="button"
+            className="btn-submit budget-plan-detail-header__save"
+            disabled={savePlan.isPending || applyTemplate.isPending}
+            onClick={handleSavePlan}
+          >
+            {savePlan.isPending ? 'Salvando...' : 'Salvar planejamento'}
+          </button>
+          <ItemActions
+            name={template.name}
+            actions={[
+              {
+                id: 'remove',
+                label: 'Excluir',
+                danger: true,
+                disabled: removeTemplate.isPending,
+                onSelect: () => {
+                  void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
+                    if (ok) removeTemplate.mutate();
+                  });
+                },
               },
-            },
-          ]}
-        />
+            ]}
+          />
+        </div>
       </header>
+      {savePlan.error && (
+        <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
+          Erro: {(savePlan.error as Error).message}
+        </p>
+      )}
       {removeTemplate.error && (
         <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
           Erro: {(removeTemplate.error as Error).message}
@@ -290,49 +262,29 @@ export function BudgetPlanDetailPage() {
             Cadastre subcategorias de saída antes de montar o planejamento.
           </p>
         ) : (
-          <form className="budget-lines-form" onSubmit={handleSaveLines}>
-            <div className="budget-lines">
-              {expenseChildren.map((category) => (
-                <label key={category.id} className="budget-line" htmlFor={`line-${category.id}`}>
-                  <span>
-                    <strong>{category.name}</strong>
-                    <small>{category.parentName}</small>
-                  </span>
-                  <span className="budget-money-field">
-                    <span aria-hidden="true">R$</span>
-                    <input
-                      id={`line-${category.id}`}
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="0.01"
-                      value={lineValues[category.id] ?? ''}
-                      placeholder="0,00"
-                      onChange={(event) =>
-                        setLineValues((current) => ({
-                          ...current,
-                          [category.id]: event.target.value,
-                        }))
-                      }
-                    />
-                  </span>
-                </label>
-              ))}
-            </div>
-            <button
-              className="btn-submit"
-              type="submit"
-              disabled={saveLines.isPending || applyTemplate.isPending}
-            >
-              {saveLines.isPending ? 'Salvando molde...' : 'Salvar limites'}
-            </button>
-          </form>
-        )}
-
-        {saveLines.error && (
-          <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
-            Erro: {(saveLines.error as Error).message}
-          </p>
+          <div className="budget-lines">
+            {expenseChildren.map((category) => (
+              <label key={category.id} className="budget-line" htmlFor={`line-${category.id}`}>
+                <span>
+                  <strong>{category.name}</strong>
+                  <small>{category.parentName}</small>
+                </span>
+                <span className="budget-money-field">
+                  <span aria-hidden="true">R$</span>
+                  <MoneyInput
+                    id={`line-${category.id}`}
+                    value={lineValues[category.id] ?? 0}
+                    onChange={(nextValue) =>
+                      setLineValues((current) => ({
+                        ...current,
+                        [category.id]: nextValue,
+                      }))
+                    }
+                  />
+                </span>
+              </label>
+            ))}
+          </div>
         )}
       </section>
 
@@ -384,7 +336,7 @@ export function BudgetPlanDetailPage() {
             className="btn-submit"
             type="submit"
             disabled={
-              applyTemplate.isPending || saveLines.isPending || !startPeriod || !validMonths
+              applyTemplate.isPending || savePlan.isPending || !startPeriod || !validMonths
             }
           >
             {applyTemplate.isPending ? 'Salvando e gerando...' : 'Gerar meses'}
@@ -410,7 +362,7 @@ export function BudgetPlanDetailPage() {
         <div className="budget-detail-section__heading">
           <div>
             <h2>Meses gerados</h2>
-            <p>Abra um mês para ajustar somente aquele período.</p>
+            <p>Abra um mês para ajustar aquele período. As alterações entram no Salvar planejamento.</p>
           </div>
         </div>
 
@@ -423,7 +375,13 @@ export function BudgetPlanDetailPage() {
             {generatedPeriods.map((period) => (
               <details key={periodKey(period)} className="budget-month glass-module">
                 <summary>{periodLabel(period)}</summary>
-                <MonthBudgetEditor period={period} />
+                <MonthBudgetEditor
+                  period={period}
+                  drafts={monthDrafts}
+                  onDraftChange={(budgetId, amount) =>
+                    setMonthDrafts((current) => ({ ...current, [budgetId]: amount }))
+                  }
+                />
               </details>
             ))}
           </div>

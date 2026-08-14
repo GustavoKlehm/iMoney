@@ -1,8 +1,43 @@
+const MAX_MONEY_CENTS = 9_999_999_999;
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
+}
+
+export function reaisToCents(value: number): number {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.min(Math.round(amount * 100), MAX_MONEY_CENTS);
+}
+
+export function centsToReais(cents: number): number {
+  return cents / 100;
+}
+
+export function formatMoneyInput(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function digitsToCents(raw: string): number {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return 0;
+  const cents = Number.parseInt(digits, 10);
+  if (!Number.isFinite(cents)) return 0;
+  return Math.min(cents, MAX_MONEY_CENTS);
+}
+
+export function appendMoneyDigit(cents: number, digit: number): number {
+  return Math.min(cents * 10 + digit, MAX_MONEY_CENTS);
+}
+
+export function removeMoneyDigit(cents: number): number {
+  return Math.floor(cents / 10);
 }
 
 export function formatDate(date: string | Date): string {

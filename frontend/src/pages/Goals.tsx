@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
@@ -36,7 +37,7 @@ export function GoalsPage() {
   const [name, setName] = useState('');
   const [accountId, setAccountId] = useState('');
   const [piggyName, setPiggyName] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
+  const [targetAmount, setTargetAmount] = useState(0);
   const [endDate, setEndDate] = useState(defaultEndDate);
 
   const goalsQuery = useQuery({
@@ -61,7 +62,7 @@ export function GoalsPage() {
       return api.plans.createGoal({
         name: name.trim(),
         accountId: selectedAccountId,
-        targetAmount: Number(targetAmount),
+        targetAmount,
         endDate,
       });
     },
@@ -85,7 +86,7 @@ export function GoalsPage() {
   const reservedAccounts = (accountsQuery.data ?? []).filter(
     (account) => account.isReserved && account.isActive,
   );
-  const validAmount = Number(targetAmount) > 0;
+  const validAmount = targetAmount > 0;
   const canCreate = Boolean(
     name.trim()
       && validAmount
@@ -174,15 +175,10 @@ export function GoalsPage() {
 
           <div className="glass-field">
             <label htmlFor="goal-target">Valor-alvo (R$)</label>
-            <input
+            <MoneyInput
               id="goal-target"
-              type="number"
-              inputMode="decimal"
-              min="0.01"
-              step="0.01"
               value={targetAmount}
-              onChange={(event) => setTargetAmount(event.target.value)}
-              placeholder="12000,00"
+              onChange={setTargetAmount}
               required
             />
           </div>

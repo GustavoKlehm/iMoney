@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type Account, type CreateAccount } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
@@ -15,7 +16,7 @@ export function AccountsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [isReserved, setIsReserved] = useState(false);
-  const [openingBalance, setOpeningBalance] = useState('');
+  const [openingBalance, setOpeningBalance] = useState(0);
 
   const accountsQuery = useQuery({
     queryKey: ['accounts'],
@@ -74,7 +75,7 @@ export function AccountsPage() {
   function resetForm() {
     setName('');
     setIsReserved(false);
-    setOpeningBalance('');
+    setOpeningBalance(0);
     setEditingId(null);
     setShowForm(false);
   }
@@ -84,13 +85,13 @@ export function AccountsPage() {
       setEditingId(null);
       setName('');
       setIsReserved(false);
-      setOpeningBalance('');
+      setOpeningBalance(0);
       setShowForm(true);
       return;
     }
     setName('');
     setIsReserved(false);
-    setOpeningBalance('');
+    setOpeningBalance(0);
     setShowForm((current) => !current);
   }
 
@@ -98,7 +99,7 @@ export function AccountsPage() {
     setEditingId(account.id);
     setName(account.name);
     setIsReserved(account.isReserved);
-    setOpeningBalance('');
+    setOpeningBalance(0);
     setShowForm(true);
   }
 
@@ -115,13 +116,10 @@ export function AccountsPage() {
       return;
     }
 
-    const parsedOpeningBalance =
-      openingBalance === '' ? undefined : Number(openingBalance);
-
     createAccount.mutate({
       name: trimmedName,
       isReserved,
-      openingBalance: parsedOpeningBalance,
+      openingBalance: openingBalance || undefined,
     });
   }
 
@@ -190,15 +188,10 @@ export function AccountsPage() {
           {!editingId && (
             <div className="glass-field">
               <label htmlFor="opening-balance">Saldo inicial (opcional)</label>
-              <input
+              <MoneyInput
                 id="opening-balance"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
                 value={openingBalance}
-                onChange={(event) => setOpeningBalance(event.target.value)}
-                placeholder="0,00"
+                onChange={setOpeningBalance}
               />
             </div>
           )}

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type Goal } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
+import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
@@ -27,7 +28,7 @@ export function GoalDetailPage() {
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [name, setName] = useState('');
   const [accountId, setAccountId] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
+  const [targetAmount, setTargetAmount] = useState(0);
   const [endDate, setEndDate] = useState('');
 
   const goalsQuery = useQuery({
@@ -45,7 +46,7 @@ export function GoalDetailPage() {
     if (!goal || editorMode !== null) return;
     setName(goal.name);
     setAccountId(goal.accountId);
-    setTargetAmount(String(goal.targetAmount));
+    setTargetAmount(goal.targetAmount);
     setEndDate(inputDate(goal.endDate));
   }, [editorMode, goal]);
 
@@ -55,13 +56,13 @@ export function GoalDetailPage() {
         currentGoal.id,
         editorMode === 'raise'
           ? {
-              targetAmount: Number(targetAmount),
+              targetAmount,
               endDate,
             }
           : {
               name: name.trim(),
               accountId,
-              targetAmount: Number(targetAmount),
+              targetAmount,
               endDate,
             },
       ),
@@ -106,14 +107,14 @@ export function GoalDetailPage() {
     ? `/lancamentos/novo?type=TRANSFER&accountId=${encodeURIComponent(goal.accountId)}&toAccountId=${encodeURIComponent(defaultAccount.id)}`
     : '';
   const validForm = editorMode === 'raise'
-    ? Boolean(Number(targetAmount) > 0 && endDate)
-    : Boolean(name.trim() && accountId && Number(targetAmount) > 0 && endDate);
+    ? Boolean(targetAmount > 0 && endDate)
+    : Boolean(name.trim() && accountId && targetAmount > 0 && endDate);
 
   function openEditor(mode: Exclude<EditorMode, null>) {
     if (!goal) return;
     setName(goal.name);
     setAccountId(goal.accountId);
-    setTargetAmount(String(goal.targetAmount));
+    setTargetAmount(goal.targetAmount);
     setEndDate(inputDate(goal.endDate));
     setEditorMode(mode);
   }
@@ -266,14 +267,10 @@ export function GoalDetailPage() {
             )}
             <div className="glass-field">
               <label htmlFor="goal-edit-target">Valor-alvo (R$)</label>
-              <input
+              <MoneyInput
                 id="goal-edit-target"
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="0.01"
                 value={targetAmount}
-                onChange={(event) => setTargetAmount(event.target.value)}
+                onChange={setTargetAmount}
                 required
               />
             </div>
