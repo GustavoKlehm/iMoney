@@ -25,6 +25,7 @@ export function CategoriesPage() {
   const queryClient = useQueryClient();
   const nameInputRef = useRef<HTMLInputElement>(null);
   const cancelEditRef = useRef(false);
+  const [showForm, setShowForm] = useState(false);
   const [kind, setKind] = useState<CategoryKind>('GROUP');
   const [name, setName] = useState('');
   const [type, setType] = useState<EditableCategoryType>('EXPENSE');
@@ -44,9 +45,7 @@ export function CategoriesPage() {
   const createCategory = useMutation({
     mutationFn: (data: CreateCategory) => api.categories.create(data),
     onSuccess: async () => {
-      setName('');
-      setParentId('');
-      setKind('GROUP');
+      resetCreateForm();
       await invalidateCategories();
     },
   });
@@ -85,6 +84,26 @@ export function CategoriesPage() {
   const mutationError = createCategory.error ?? updateCategory.error ?? removeCategory.error;
   const mutationPending =
     createCategory.isPending || updateCategory.isPending || removeCategory.isPending;
+
+  function resetCreateForm() {
+    setName('');
+    setParentId('');
+    setKind('GROUP');
+    setType('EXPENSE');
+    setShowForm(false);
+  }
+
+  function openCreate() {
+    if (showForm) {
+      resetCreateForm();
+      return;
+    }
+    setName('');
+    setParentId('');
+    setKind('GROUP');
+    setType('EXPENSE');
+    setShowForm(true);
+  }
 
   function toggleParent(id: string) {
     setOpenParents((current) => {
@@ -135,6 +154,7 @@ export function CategoriesPage() {
     setParentId(parent.id);
     if (parent.type === 'INCOME' || parent.type === 'EXPENSE') setType(parent.type);
     setName('');
+    setShowForm(true);
     window.requestAnimationFrame(() => {
       nameInputRef.current?.focus();
       nameInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -326,12 +346,24 @@ export function CategoriesPage() {
 
   return (
     <div className="categories-page">
-      <header className="page-header">
-        <h1>Categorias</h1>
-        <p className="subtitle">Organize entradas e saídas por grupo</p>
+      <header className="page-header categories-header">
+        <div>
+          <h1>Categorias</h1>
+          <p className="subtitle">Organize entradas e saídas por grupo</p>
+        </div>
+        <button
+          type="button"
+          className="btn-primary categories-header__action"
+          aria-expanded={showForm}
+          aria-controls="category-form"
+          onClick={openCreate}
+        >
+          {showForm ? 'Fechar formulário' : 'Nova categoria'}
+        </button>
       </header>
 
-      <form className="category-form glass-module" onSubmit={handleSubmit}>
+      {showForm && (
+      <form id="category-form" className="category-form glass-module" onSubmit={handleSubmit}>
         <h2>Nova categoria</h2>
         <div className="category-kind" role="radiogroup" aria-label="Nível da categoria">
           <label>
@@ -365,6 +397,7 @@ export function CategoriesPage() {
             placeholder={kind === 'GROUP' ? 'Ex.: Moradia' : 'Ex.: Aluguel'}
             maxLength={100}
             required
+            autoFocus
           />
         </div>
 
@@ -407,6 +440,7 @@ export function CategoriesPage() {
           {createCategory.isPending ? 'Salvando...' : 'Criar categoria'}
         </button>
       </form>
+      )}
 
       {mutationError && (
         <div className="categories-feedback" role="alert">

@@ -1,3 +1,14 @@
+.categories-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.categories-header__action {
+  width: 100%;
+}
+
 .category-form {
   display: grid;
   gap: 1.25rem;
@@ -294,6 +305,17 @@
 }
 
 @media (min-width: 768px) {
+  .categories-header {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .categories-header__action {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
   .category-form {
     grid-template-columns: minmax(200px, 0.75fr) minmax(0, 1fr) minmax(180px, 0.75fr);
     align-items: end;
