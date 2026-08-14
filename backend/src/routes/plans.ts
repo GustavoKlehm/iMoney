@@ -76,15 +76,22 @@ async function assertNoActiveGoal(
   accountId: string,
   exceptId?: string,
 ) {
-  const activeGoalCount = await tx.plan.count({
+  const activeGoals = await tx.plan.findMany({
     where: {
       accountId,
       type: PlanType.GOAL,
       status: PlanStatus.ACTIVE,
       ...(exceptId ? { id: { not: exceptId } } : {}),
     },
+    select: { targetAmount: true },
   });
-  if (activeGoalCount > 0) {
+  if (activeGoals.length === 0) return;
+
+  const balance = await balanceOf(accountId, tx);
+  const hasUnfundedActiveGoal = activeGoals.some(
+    (goal) => !isGoalAchieved(Number(goal.targetAmount), balance),
+  );
+  if (hasUnfundedActiveGoal) {
     throw new AppError(400, 'Este cofrinho já tem um objetivo ativo');
   }
 }

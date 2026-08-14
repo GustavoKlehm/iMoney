@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
+import { isGoalAchieved } from '../lib/goal.js';
 import { prisma } from '../lib/prisma.js';
 
 const router = Router();
@@ -136,6 +137,24 @@ router.get('/monthly', async (req, res, next) => {
       where: { status: 'ACTIVE' },
       include: { category: true },
     });
+    const visibleActivePlans = activePlans.flatMap((plan) => {
+      const targetAmount = Number(plan.targetAmount);
+      const currentAmount = plan.type === 'GOAL' && plan.accountId
+        ? balanceByAccount.get(plan.accountId) ?? 0
+        : Number(plan.currentAmount);
+      if (plan.type === 'GOAL' && isGoalAchieved(targetAmount, currentAmount)) {
+        return [];
+      }
+      return [{
+        ...plan,
+        targetAmount,
+        currentAmount,
+        remaining: targetAmount - currentAmount,
+        progress: targetAmount > 0
+          ? Math.round((currentAmount / targetAmount) * 1000) / 10
+          : 0,
+      }];
+    });
 
     res.json({
       period: { year, month, daysInMonth, daysElapsed },
@@ -150,21 +169,7 @@ router.get('/monthly', async (req, res, next) => {
       budgetProgress,
       accountBalances,
       upcomingOccurrences,
-      activePlans: activePlans.map((p) => {
-        const targetAmount = Number(p.targetAmount);
-        const currentAmount = p.type === 'GOAL' && p.accountId
-          ? balanceByAccount.get(p.accountId) ?? 0
-          : Number(p.currentAmount);
-        return {
-          ...p,
-          targetAmount,
-          currentAmount,
-          remaining: targetAmount - currentAmount,
-          progress: targetAmount > 0
-            ? Math.round((currentAmount / targetAmount) * 1000) / 10
-            : 0,
-        };
-      }),
+      activePlans: visibleActivePlans,
     });
   } catch (error) {
     next(error);
