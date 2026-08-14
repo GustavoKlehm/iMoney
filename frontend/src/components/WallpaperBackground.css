@@ -1,0 +1,41 @@
+.wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 85% 65% at 50% 42%, rgba(128, 26, 48, 0.72) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 55% at 12% 8%, rgba(45, 27, 78, 0.85) 0%, transparent 52%),
+    radial-gradient(ellipse 65% 50% at 88% 12%, rgba(38, 22, 62, 0.75) 0%, transparent 48%),
+    radial-gradient(ellipse 75% 60% at 92% 88%, rgba(141, 169, 244, 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 8% 78%, rgba(90, 60, 120, 0.45) 0%, transparent 50%),
+    linear-gradient(155deg, #1a0b2e 0%, #2a1538 35%, #3d1a32 58%, #1e2848 100%);
+}
+
+.wallpaper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wallpaper {
+    animation: vibe-shift 24s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes vibe-shift {
+  from { filter: hue-rotate(0deg) brightness(1); }
+  to { filter: hue-rotate(8deg) brightness(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallpaper {
+    animation: none;
+  }
+}

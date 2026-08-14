@@ -1,0 +1,59 @@
+.liquid-track {
+  position: relative;
+  height: 2.125rem;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.liquid-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 0;
+  border-radius: var(--radius-pill);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.liquid-fill--default {
+  background: linear-gradient(90deg, #4a1f3d 0%, #7b9ef0 100%);
+}
+
+.liquid-fill--success {
+  background: linear-gradient(90deg, #3d5a40 0%, #6ee7a0 100%);
+}
+
+.liquid-fill--warning {
+  background: linear-gradient(90deg, #5c4030 0%, #fbbf24 100%);
+}
+
+.liquid-fill--danger {
+  background: linear-gradient(90deg, #5c2020 0%, #f87171 100%);
+}
+
+.liquid-track--thin {
+  height: 5px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.liquid-track--thin .liquid-fill {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-fill {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-track {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(45, 27, 78, 0.85);
+  }
+}

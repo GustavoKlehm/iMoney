@@ -1,0 +1,312 @@
+.dashboard {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.page-header--compact {
+  margin-bottom: 1.125rem;
+}
+
+.page-header--compact h1 {
+  font-size: 1.35rem;
+}
+
+/* ── Hero: saldo livre ── */
+
+.hero-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.125rem 1.25rem;
+  margin-bottom: 0.875rem;
+  border-radius: var(--radius-xl);
+  text-align: center;
+}
+
+.hero-balance__label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+}
+
+.hero-balance__value {
+  font-size: clamp(1.5rem, 5vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+/* ── Metas + Contas (prioridade, above the fold) ── */
+
+.priority-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.priority-row--split {
+  grid-template-columns: 1fr 1fr;
+}
+
+.priority-panel {
+  border-radius: var(--radius-lg);
+  padding: 0.875rem 1rem;
+  min-width: 0;
+}
+
+.panel-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.625rem;
+  text-align: left;
+}
+
+.compact-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.compact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.compact-item--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.compact-list--accounts .compact-item--row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.compact-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.compact-item__name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.compact-item__pct {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.compact-item__meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 300;
+}
+
+.compact-item__amount {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Métricas secundárias (grid compacto) ── */
+
+.metrics-module {
+  border-radius: var(--radius-lg);
+  padding: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.625rem 0.5rem;
+  border-radius: var(--radius-md);
+  background: var(--lg-tint-cell);
+  text-align: center;
+  min-width: 0;
+}
+
+.metric-card.income .metric-value { color: var(--success); }
+.metric-card.expense .metric-value { color: var(--danger); }
+
+.metric-label {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-value.muted { color: var(--text-muted); }
+.metric-value.positive { color: var(--success); }
+.metric-value.negative { color: var(--danger); }
+
+/* ── Orçamento (grid multi-coluna, compacto) ── */
+
+.budget-section {
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.625rem;
+  text-align: left;
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+
+.budget-item {
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.875rem;
+  min-width: 0;
+}
+
+.budget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.budget-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.budget-amounts {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 300;
+}
+
+.budget-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  margin-top: 0.45rem;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 300;
+}
+
+.alert-badge {
+  background: var(--warning-bg);
+  color: var(--warning);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.6rem;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.badge {
+  margin-left: 0.35rem;
+  font-size: 0.58rem;
+  font-weight: 600;
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(141, 169, 244, 0.28);
+  vertical-align: middle;
+}
+
+/* ── Responsive ── */
+
+@media (min-width: 640px) {
+  .metrics-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .metric-value {
+    font-size: 0.9375rem;
+  }
+
+  .budget-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .priority-row--split {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metrics-grid .metric-card:last-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 375px) {
+  .budget-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .metric-card {
+    background: rgba(45, 27, 78, 0.85);
+  }
+}
