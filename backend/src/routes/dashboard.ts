@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { isGoalAchieved } from '../lib/goal.js';
+import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
 
 const router = Router();
@@ -19,10 +20,10 @@ router.get('/monthly', async (req, res, next) => {
     const end = new Date(year, month, 0);
     const daysInMonth = end.getDate();
     const today = new Date();
+    const isCurrentMonth =
+      today.getFullYear() === year && today.getMonth() === month - 1;
     const daysElapsed =
-      today.getFullYear() === year && today.getMonth() === month - 1
-        ? today.getDate()
-        : daysInMonth;
+      isCurrentMonth ? today.getDate() : daysInMonth;
 
     const [incomeAgg, expenseAgg, budgets, expensesByCategory] = await Promise.all([
       prisma.transaction.aggregate({
@@ -60,8 +61,16 @@ router.get('/monthly', async (req, res, next) => {
       const limit = Number(b.limitAmount);
       const remaining = limit - spent;
       const percent = limit > 0 ? (spent / limit) * 100 : 0;
-      const dailyAvg = daysElapsed > 0 ? spent / daysElapsed : 0;
-      const projected = dailyAvg * daysInMonth;
+      const projected = projectedMonth(spent, daysElapsed, daysInMonth);
+      const expected = expectedToDate(limit, daysElapsed, daysInMonth);
+      const status = paceStatus({
+        spent,
+        limit,
+        day: daysElapsed,
+        daysInMonth,
+        isCurrentMonth,
+      });
+      const paceRatio = expected > 0 ? spent / expected : 0;
 
       let alert: string | null = null;
       if (percent >= 100) alert = 'over_limit';
@@ -77,6 +86,9 @@ router.get('/monthly', async (req, res, next) => {
         remaining,
         percent: Math.round(percent * 10) / 10,
         projected: Math.round(projected * 100) / 100,
+        expectedToDate: expected,
+        paceRatio,
+        paceStatus: status,
         alert,
       };
     });

@@ -52,3 +52,10 @@ export const ALERT_LABELS: Record<string, string> = {
   over_limit: 'Acima do limite',
   pace_above_budget: 'Ritmo acima do orçamento',
 };
+
+export const PACE_STATUS_LABELS: Record<string, string> = {
+  on_track: 'No ritmo',
+  warning: 'Atenção',
+  over_pace: 'Acima do ritmo',
+  over_limit: 'Estourou',
+};

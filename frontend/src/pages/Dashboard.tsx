@@ -1,9 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../api/client';
+import { api, type PaceStatus } from '../api/client';
 import { LiquidProgress } from '../components/LiquidProgress';
 import { PageLoading } from '../components/PageLoading';
-import { ALERT_LABELS, formatCurrency, getCurrentPeriod, MONTH_NAMES } from '../utils/format';
+import { formatCurrency, getCurrentPeriod, MONTH_NAMES, PACE_STATUS_LABELS } from '../utils/format';
 import './Dashboard.css';
+
+function paceVariant(status: PaceStatus | null): 'success' | 'warning' | 'danger' {
+  if (status === 'warning') return 'warning';
+  if (status === 'over_pace' || status === 'over_limit') return 'danger';
+  return 'success';
+}
 
 export function DashboardPage() {
   const { year, month } = getCurrentPeriod();
@@ -113,7 +119,10 @@ export function DashboardPage() {
           <h2 id="budget-heading" className="section-title">Orçamento por categoria</h2>
           <div className="budget-grid">
             {data.budgetProgress.map((item) => (
-              <article key={item.category.id} className="budget-item">
+              <article
+                key={item.category.id}
+                className={`budget-item${item.paceStatus ? ` budget-item--${item.paceStatus}` : ''}`}
+              >
                 <div className="budget-header">
                   <span className="budget-name">{item.category.name}</span>
                   <span className="budget-amounts">
@@ -122,16 +131,25 @@ export function DashboardPage() {
                 </div>
                 <LiquidProgress
                   value={item.percent}
+                  variant={paceVariant(item.paceStatus)}
                   size="thin"
                   label={`Orçamento ${item.category.name}: ${item.percent}% usado`}
                 />
                 <div className="budget-footer">
                   <span>{item.percent}%</span>
                   <span>Restam {formatCurrency(item.remaining)}</span>
-                  {item.alert && (
-                    <span className="alert-badge">{ALERT_LABELS[item.alert] ?? item.alert}</span>
+                  {item.paceStatus && (
+                    <span className={`pace-badge pace-badge--${item.paceStatus}`}>
+                      {PACE_STATUS_LABELS[item.paceStatus]}
+                    </span>
                   )}
                 </div>
+                <p className="budget-pace-detail">
+                  Esperado até hoje: {formatCurrency(item.expectedToDate)}
+                  {(item.paceStatus === 'over_pace' || item.paceStatus === 'over_limit') && (
+                    <> · Projeção: {formatCurrency(item.projected)}</>
+                  )}
+                </p>
               </article>
             ))}
           </div>

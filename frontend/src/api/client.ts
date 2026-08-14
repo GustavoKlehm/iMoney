@@ -270,6 +270,8 @@ export interface CreateGoal {
 
 export type UpdateGoal = Partial<Omit<CreateGoal, 'startDate'>>;
 
+export type PaceStatus = 'on_track' | 'warning' | 'over_pace' | 'over_limit';
+
 export interface BudgetProgress {
   category: Category;
   limit: number;
@@ -277,6 +279,9 @@ export interface BudgetProgress {
   remaining: number;
   percent: number;
   projected: number;
+  expectedToDate: number;
+  paceRatio: number;
+  paceStatus: PaceStatus | null;
   alert: string | null;
 }
 

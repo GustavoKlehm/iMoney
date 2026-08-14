@@ -206,10 +206,16 @@
 }
 
 .budget-item {
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   padding: 0.75rem 0.875rem;
   min-width: 0;
 }
+
+.budget-item--on_track { border-color: var(--success); }
+.budget-item--warning { border-color: var(--warning); }
+.budget-item--over_pace,
+.budget-item--over_limit { border-color: var(--danger); }
 
 .budget-header {
   display: flex;
@@ -247,14 +253,25 @@
   font-weight: 300;
 }
 
-.alert-badge {
-  background: var(--warning-bg);
-  color: var(--warning);
+.pace-badge {
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-pill);
   font-weight: 600;
   font-size: 0.6rem;
-  border: 1px solid rgba(251, 191, 36, 0.25);
+  border: 1px solid currentColor;
+}
+
+.pace-badge--on_track { color: var(--success); }
+.pace-badge--warning { color: var(--warning); }
+.pace-badge--over_pace,
+.pace-badge--over_limit { color: var(--danger); }
+
+.budget-pace-detail {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 300;
+  line-height: 1.4;
 }
 
 .badge {
