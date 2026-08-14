@@ -1,13 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type CreateAccount } from '../api/client';
+import { api, type Account, type CreateAccount } from '../api/client';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { removalCopy } from '../utils/confirmRemoval';
 import { formatCurrency } from '../utils/format';
 import './Accounts.css';
 
 export function AccountsPage() {
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [isReserved, setIsReserved] = useState(false);
   const [openingBalance, setOpeningBalance] = useState('');
@@ -17,24 +22,36 @@ export function AccountsPage() {
     queryFn: api.accounts.list,
   });
 
+  const invalidateAccounts = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  };
+
   const createAccount = useMutation({
     mutationFn: (data: CreateAccount) => api.accounts.create(data),
     onSuccess: async () => {
-      setName('');
-      setIsReserved(false);
-      setOpeningBalance('');
-      setShowForm(false);
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      resetForm();
+      await invalidateAccounts();
+    },
+  });
+
+  const updateAccount = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateAccount> & { isActive?: boolean } }) =>
+      api.accounts.update(id, data),
+    onSuccess: async () => {
+      resetForm();
+      await invalidateAccounts();
     },
   });
 
   const setDefault = useMutation({
     mutationFn: api.accounts.setDefault,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
+    onSuccess: invalidateAccounts,
+  });
+
+  const removeAccount = useMutation({
+    mutationFn: api.accounts.remove,
+    onSuccess: invalidateAccounts,
   });
 
   if (accountsQuery.isLoading) {
@@ -45,19 +62,72 @@ export function AccountsPage() {
     return <div className="page-error">Erro: {(accountsQuery.error as Error).message}</div>;
   }
 
-  const accounts = accountsQuery.data ?? [];
-  const mutationError = createAccount.error ?? setDefault.error;
+  const accounts = [...(accountsQuery.data ?? [])].sort(
+    (first, second) => Number(second.isActive) - Number(first.isActive),
+  );
+  const editingAccount = accounts.find((account) => account.id === editingId);
+  const mutationError =
+    createAccount.error ?? updateAccount.error ?? setDefault.error ?? removeAccount.error;
+  const mutationPending =
+    createAccount.isPending || updateAccount.isPending || setDefault.isPending || removeAccount.isPending;
+
+  function resetForm() {
+    setName('');
+    setIsReserved(false);
+    setOpeningBalance('');
+    setEditingId(null);
+    setShowForm(false);
+  }
+
+  function openCreate() {
+    if (editingId) {
+      setEditingId(null);
+      setName('');
+      setIsReserved(false);
+      setOpeningBalance('');
+      setShowForm(true);
+      return;
+    }
+    setName('');
+    setIsReserved(false);
+    setOpeningBalance('');
+    setShowForm((current) => !current);
+  }
+
+  function startEditing(account: Account) {
+    setEditingId(account.id);
+    setName(account.name);
+    setIsReserved(account.isReserved);
+    setOpeningBalance('');
+    setShowForm(true);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    if (editingId) {
+      updateAccount.mutate({
+        id: editingId,
+        data: { name: trimmedName, isReserved },
+      });
+      return;
+    }
+
     const parsedOpeningBalance =
       openingBalance === '' ? undefined : Number(openingBalance);
 
     createAccount.mutate({
-      name: name.trim(),
+      name: trimmedName,
       isReserved,
       openingBalance: parsedOpeningBalance,
     });
+  }
+
+  async function handleRemove(account: Account) {
+    if (!(await confirm(removalCopy(account.name, Boolean(account.hasHistory))))) return;
+    removeAccount.mutate(account.id);
   }
 
   return (
@@ -71,19 +141,22 @@ export function AccountsPage() {
           type="button"
           className="btn-primary accounts-header__action"
           aria-expanded={showForm}
-          aria-controls="new-account-form"
-          onClick={() => setShowForm((current) => !current)}
+          aria-controls="account-form"
+          onClick={openCreate}
         >
-          {showForm ? 'Fechar formulário' : 'Nova conta ou cofrinho'}
+          {showForm && !editingId ? 'Fechar formulário' : 'Nova conta ou cofrinho'}
         </button>
       </header>
 
       {showForm && (
         <form
-          id="new-account-form"
+          id="account-form"
           className="account-form glass-module"
           onSubmit={handleSubmit}
         >
+          <h2 className="account-form__title">
+            {editingAccount ? 'Editar conta' : 'Nova conta ou cofrinho'}
+          </h2>
           <div className="glass-field">
             <label htmlFor="account-name">Nome</label>
             <input
@@ -101,30 +174,41 @@ export function AccountsPage() {
             <input
               type="checkbox"
               checked={isReserved}
+              disabled={Boolean(editingAccount?.isDefault)}
               onChange={(event) => setIsReserved(event.target.checked)}
             />
             <span>
               <strong>É cofrinho</strong>
-              <small>O saldo fica reservado e não entra no saldo livre.</small>
+              <small>
+                {editingAccount?.isDefault
+                  ? 'A conta padrão não pode virar cofrinho.'
+                  : 'O saldo fica reservado e não entra no saldo livre.'}
+              </small>
             </span>
           </label>
 
-          <div className="glass-field">
-            <label htmlFor="opening-balance">Saldo inicial (opcional)</label>
-            <input
-              id="opening-balance"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              value={openingBalance}
-              onChange={(event) => setOpeningBalance(event.target.value)}
-              placeholder="0,00"
-            />
-          </div>
+          {!editingId && (
+            <div className="glass-field">
+              <label htmlFor="opening-balance">Saldo inicial (opcional)</label>
+              <input
+                id="opening-balance"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={openingBalance}
+                onChange={(event) => setOpeningBalance(event.target.value)}
+                placeholder="0,00"
+              />
+            </div>
+          )}
 
-          <button className="btn-submit" type="submit" disabled={createAccount.isPending}>
-            {createAccount.isPending ? 'Salvando...' : 'Salvar'}
+          <button
+            className="btn-submit"
+            type="submit"
+            disabled={createAccount.isPending || updateAccount.isPending}
+          >
+            {createAccount.isPending || updateAccount.isPending ? 'Salvando...' : 'Salvar'}
           </button>
         </form>
       )}
@@ -142,7 +226,10 @@ export function AccountsPage() {
       ) : (
         <div className="accounts-cards">
           {accounts.map((account) => (
-            <article key={account.id} className="account-card glass-module">
+            <article
+              key={account.id}
+              className={`account-card glass-module${account.isActive ? '' : ' account-card--inactive'}`}
+            >
               <div className="account-card__details">
                 <div className="account-card__heading">
                   <h2>{account.name}</h2>
@@ -152,24 +239,53 @@ export function AccountsPage() {
                   {account.isDefault && (
                     <span className="account-badge account-badge--default">Padrão</span>
                   )}
+                  {!account.isActive && (
+                    <span className="account-badge">Inativa</span>
+                  )}
                 </div>
                 <span className="account-card__balance">
                   {formatCurrency(account.balance ?? 0)}
                 </span>
               </div>
 
-              {!account.isReserved && !account.isDefault && (
-                <button
-                  type="button"
-                  className="account-card__default-action"
-                  disabled={setDefault.isPending}
-                  onClick={() => setDefault.mutate(account.id)}
-                >
-                  {setDefault.isPending && setDefault.variables === account.id
-                    ? 'Definindo...'
-                    : 'Definir como padrão'}
-                </button>
-              )}
+              <ItemActions
+                name={account.name}
+                actions={[
+                  {
+                    id: 'edit',
+                    label: 'Editar',
+                    onSelect: () => startEditing(account),
+                  },
+                  ...(!account.isReserved && !account.isDefault && account.isActive
+                    ? [{
+                        id: 'default',
+                        label: setDefault.isPending && setDefault.variables === account.id
+                          ? 'Definindo...'
+                          : 'Definir como padrão',
+                        onSelect: () => setDefault.mutate(account.id),
+                        disabled: mutationPending,
+                      }]
+                    : []),
+                  ...(!account.isActive
+                    ? [{
+                        id: 'reactivate',
+                        label: 'Reativar',
+                        onSelect: () => updateAccount.mutate({
+                          id: account.id,
+                          data: { isActive: true },
+                        }),
+                        disabled: mutationPending,
+                      }]
+                    : []),
+                  {
+                    id: 'remove',
+                    label: 'Excluir',
+                    danger: true,
+                    disabled: mutationPending,
+                    onSelect: () => handleRemove(account),
+                  },
+                ]}
+              />
             </article>
           ))}
         </div>

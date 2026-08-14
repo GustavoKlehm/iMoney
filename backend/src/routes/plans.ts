@@ -240,4 +240,25 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const current = await prisma.plan.findFirst({
+      where: { id: req.params.id, type: PlanType.GOAL },
+    });
+    if (!current) throw new AppError(404, 'Objetivo não encontrado');
+
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.updateMany({
+        where: { planId: current.id },
+        data: { planId: null },
+      });
+      await tx.plan.delete({ where: { id: current.id } });
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

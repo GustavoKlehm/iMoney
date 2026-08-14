@@ -56,6 +56,8 @@ export const api = {
       request<Account>(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     setDefault: (id: string) =>
       request<Account>(`/accounts/${id}/default`, { method: 'POST' }),
+    remove: (id: string) =>
+      request<Account | void>(`/accounts/${id}`, { method: 'DELETE' }),
   },
 
   transactions: {
@@ -69,6 +71,14 @@ export const api = {
     },
     create: (data: CreateTransaction) =>
       request<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => request<Transaction>(`/transactions/${id}`),
+    update: (id: string, data: Partial<CreateTransaction>) =>
+      request<Transaction>(`/transactions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    remove: (id: string) =>
+      request<void>(`/transactions/${id}`, { method: 'DELETE' }),
     cancel: (id: string) =>
       request<Transaction>(`/transactions/${id}/cancel`, { method: 'POST' }),
   },
@@ -91,6 +101,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    remove: (id: string) =>
+      request<void>(`/budget-templates/${id}`, { method: 'DELETE' }),
   },
 
   budgets: {
@@ -109,6 +121,8 @@ export const api = {
       request<Goal>('/plans', { method: 'POST', body: JSON.stringify(data) }),
     updateGoal: (id: string, data: UpdateGoal) =>
       request<Goal>(`/plans/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    removeGoal: (id: string) =>
+      request<void>(`/plans/${id}`, { method: 'DELETE' }),
   },
 };
 
@@ -123,6 +137,7 @@ export interface Category {
   type: TransactionType;
   parentId: string | null;
   isActive: boolean;
+  hasHistory?: boolean;
   children?: Category[];
 }
 
@@ -134,6 +149,7 @@ export interface Account {
   isDefault: boolean;
   isActive: boolean;
   balance?: number;
+  hasHistory?: boolean;
 }
 
 export interface CreateAccount {
@@ -202,6 +218,7 @@ export interface BudgetTemplate {
   name: string;
   lines: BudgetTemplateLine[];
   budgets?: BudgetPeriod[];
+  hasGeneratedMonths?: boolean;
 }
 
 export interface Budget {

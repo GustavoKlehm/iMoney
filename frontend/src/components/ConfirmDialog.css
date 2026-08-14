@@ -1,0 +1,106 @@
+.confirm-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.confirm-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(10, 4, 22, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.confirm-dialog__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(100%, 22.5rem);
+  gap: 0.875rem;
+  padding: 1.5rem 1.375rem 1.25rem;
+  border-radius: var(--radius-module);
+}
+
+.confirm-dialog__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.confirm-dialog__message {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.confirm-dialog__cancel,
+.confirm-dialog__confirm {
+  min-height: 48px;
+  flex: 1 1 8rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.confirm-dialog__cancel {
+  border: 1px solid var(--lg-border-soft);
+  background: var(--lg-tint);
+  backdrop-filter: var(--lg-blur);
+  -webkit-backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-rim);
+  color: var(--text);
+}
+
+.confirm-dialog__cancel:hover {
+  border-color: var(--lg-border);
+  background: var(--lg-tint-hover);
+}
+
+.confirm-dialog__confirm {
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.confirm-dialog__confirm:hover {
+  background: rgba(248, 113, 113, 0.22);
+}
+
+.confirm-dialog__cancel:focus-visible,
+.confirm-dialog__confirm:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog__backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .confirm-dialog__cancel {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(45, 27, 78, 0.94);
+  }
+}

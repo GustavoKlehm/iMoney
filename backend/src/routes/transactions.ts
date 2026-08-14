@@ -107,6 +107,9 @@ router.patch('/:id', async (req, res, next) => {
     if (existing.isCancelled) throw new AppError(400, 'Lançamento cancelado não pode ser editado');
 
     const data = baseTransactionSchema.partial().parse(req.body);
+    if (data.type !== undefined && data.type !== existing.type) {
+      throw new AppError(400, 'Tipo do lançamento não pode ser alterado');
+    }
     const auditFields: Array<{ field: string; oldValue: string | null; newValue: string | null }> = [];
 
     for (const [key, value] of Object.entries(data)) {
@@ -156,6 +159,18 @@ router.post('/:id/cancel', async (req, res, next) => {
     });
 
     res.json(transaction);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const existing = await prisma.transaction.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw new AppError(404, 'Lançamento não encontrado');
+
+    await prisma.transaction.delete({ where: { id: existing.id } });
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

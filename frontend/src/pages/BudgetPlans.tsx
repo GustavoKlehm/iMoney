@@ -2,11 +2,15 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, type CreateBudgetTemplate } from '../api/client';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { removalCopy } from '../utils/confirmRemoval';
 import { formatCurrency } from '../utils/format';
 import './BudgetPlans.css';
 
 export function BudgetPlansPage() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -22,6 +26,14 @@ export function BudgetPlansPage() {
     onSuccess: async (template) => {
       await queryClient.invalidateQueries({ queryKey: ['budget-templates'] });
       navigate(`/planejamentos/${template.id}`);
+    },
+  });
+
+  const removeTemplate = useMutation({
+    mutationFn: api.budgetTemplates.remove,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['budget-templates'] });
+      await queryClient.invalidateQueries({ queryKey: ['budgets'] });
     },
   });
 
@@ -92,6 +104,11 @@ export function BudgetPlansPage() {
           Erro: {(createTemplate.error as Error).message}
         </div>
       )}
+      {removeTemplate.error && (
+        <div className="budget-plans-feedback" role="alert">
+          Erro: {(removeTemplate.error as Error).message}
+        </div>
+      )}
 
       {templates.length === 0 ? (
         <div className="empty-state budget-plans-empty">
@@ -104,17 +121,41 @@ export function BudgetPlansPage() {
             const total = template.lines.reduce((sum, line) => sum + Number(line.amount), 0);
             const activeLines = template.lines.filter((line) => Number(line.amount) > 0).length;
             return (
-              <Link
-                key={template.id}
-                to={`/planejamentos/${template.id}`}
-                className="budget-plan-card glass-module"
-              >
-                <span className="budget-plan-card__name">{template.name}</span>
-                <span className="budget-plan-card__summary">
-                  {activeLines} {activeLines === 1 ? 'limite' : 'limites'} · {formatCurrency(total)}
-                </span>
-                <span className="budget-plan-card__action">Abrir planejamento</span>
-              </Link>
+              <article key={template.id} className="budget-plan-card glass-module">
+                <div className="budget-plan-card__toolbar">
+                  <ItemActions
+                    name={template.name}
+                    actions={[
+                      {
+                        id: 'edit',
+                        label: 'Editar',
+                        onSelect: () => navigate(`/planejamentos/${template.id}`),
+                      },
+                      {
+                        id: 'remove',
+                        label: 'Excluir',
+                        danger: true,
+                        disabled: removeTemplate.isPending,
+                        onSelect: () => {
+                          void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
+                            if (ok) removeTemplate.mutate(template.id);
+                          });
+                        },
+                      },
+                    ]}
+                  />
+                </div>
+                <Link
+                  to={`/planejamentos/${template.id}`}
+                  className="budget-plan-card__hit"
+                >
+                  <span className="budget-plan-card__name">{template.name}</span>
+                  <span className="budget-plan-card__summary">
+                    {activeLines} {activeLines === 1 ? 'limite' : 'limites'} · {formatCurrency(total)}
+                  </span>
+                  <span className="budget-plan-card__action">Abrir planejamento</span>
+                </Link>
+              </article>
             );
           })}
         </div>

@@ -60,24 +60,32 @@
 .goal-card {
   display: grid;
   min-width: 0;
+  position: relative;
   min-height: 210px;
   gap: 1rem;
   padding: 1.25rem;
   border-radius: var(--radius-module);
+}
+
+.goal-card__toolbar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+}
+
+.goal-card__hit {
+  display: grid;
+  min-width: 0;
+  min-height: 210px;
+  gap: 1rem;
+  padding-right: 3.25rem;
   color: var(--text);
   text-decoration: none;
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast);
 }
 
-.goal-card:hover {
-  border-color: var(--lg-border);
-  background: var(--lg-tint-hover);
-}
-
-.goal-card:focus-visible {
+.goal-card__hit:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }

@@ -2,7 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { removalCopy } from '../utils/confirmRemoval';
 import { formatCurrency } from '../utils/format';
 import './Goals.css';
 
@@ -26,6 +29,7 @@ function formatDate(value: string): string {
 }
 
 export function GoalsPage() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -67,6 +71,14 @@ export function GoalsPage() {
         queryClient.invalidateQueries({ queryKey: ['accounts'] }),
       ]);
       navigate(`/objetivos/${goal.id}`);
+    },
+  });
+
+  const removeGoal = useMutation({
+    mutationFn: api.plans.removeGoal,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -197,6 +209,11 @@ export function GoalsPage() {
           Erro: {(createGoal.error as Error).message}
         </p>
       )}
+      {removeGoal.error && (
+        <p className="goals-feedback goals-feedback--error" role="alert">
+          Erro: {(removeGoal.error as Error).message}
+        </p>
+      )}
 
       {goals.length === 0 ? (
         <div className="empty-state goals-empty">
@@ -208,7 +225,31 @@ export function GoalsPage() {
           {goals.map((goal) => {
             const expired = goal.monthsRemaining === null && goal.currentAmount < goal.targetAmount;
             return (
-              <Link key={goal.id} to={`/objetivos/${goal.id}`} className="goal-card glass-module">
+              <article key={goal.id} className="goal-card glass-module">
+                <div className="goal-card__toolbar">
+                  <ItemActions
+                    name={goal.name}
+                    actions={[
+                      {
+                        id: 'edit',
+                        label: 'Editar',
+                        onSelect: () => navigate(`/objetivos/${goal.id}`),
+                      },
+                      {
+                        id: 'remove',
+                        label: 'Excluir',
+                        danger: true,
+                        disabled: removeGoal.isPending,
+                        onSelect: () => {
+                          void confirm(removalCopy(goal.name, false)).then((ok) => {
+                            if (ok) removeGoal.mutate(goal.id);
+                          });
+                        },
+                      },
+                    ]}
+                  />
+                </div>
+                <Link to={`/objetivos/${goal.id}`} className="goal-card__hit">
                 <div className="goal-card__heading">
                   <div>
                     <h2>{goal.name}</h2>
@@ -232,7 +273,8 @@ export function GoalsPage() {
                   <span>Prazo: {formatDate(goal.endDate)}</span>
                   <strong>{formatCurrency(goal.monthlyReserve)} /mês</strong>
                 </div>
-              </Link>
+                </Link>
+              </article>
             );
           })}
         </div>

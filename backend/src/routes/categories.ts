@@ -1,8 +1,33 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
+import { categoryRemovalDecision } from '../lib/removalDecision.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
+
+const categoryCountSelect = {
+  transactions: true,
+  children: true,
+  budgets: true,
+  budgetTemplateLines: true,
+  plans: true,
+} as const;
+
+function hasCategoryHistory(count: {
+  transactions: number;
+  children: number;
+  budgets: number;
+  budgetTemplateLines: number;
+  plans: number;
+}) {
+  return categoryRemovalDecision({
+    hasTransactions: count.transactions > 0,
+    hasChildren: count.children > 0,
+    hasBudgetLines: count.budgetTemplateLines > 0,
+    hasBudgets: count.budgets > 0,
+    hasPlans: count.plans > 0,
+  }) === 'deactivate';
+}
 
 const router = Router();
 
@@ -24,11 +49,23 @@ router.get('/', async (_req, res, next) => {
     const categories = await prisma.category.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
-        children: { orderBy: { sortOrder: 'asc' } },
-        _count: { select: { transactions: true } },
+        children: {
+          orderBy: { sortOrder: 'asc' },
+          include: { _count: { select: categoryCountSelect } },
+        },
+        _count: { select: categoryCountSelect },
       },
     });
-    res.json(categories);
+    res.json(
+      categories.map(({ _count, children, ...category }) => ({
+        ...category,
+        hasHistory: hasCategoryHistory(_count),
+        children: children.map(({ _count: childCount, ...child }) => ({
+          ...child,
+          hasHistory: hasCategoryHistory(childCount),
+        })),
+      })),
+    );
   } catch (error) {
     next(error);
   }
@@ -72,19 +109,30 @@ router.patch('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const count = await prisma.transaction.count({
-      where: { categoryId: req.params.id },
+    const existing = await prisma.category.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw new AppError(404, 'Categoria não encontrada');
+
+    const [transactions, children, budgetLines, budgets, plans] = await Promise.all([
+      prisma.transaction.count({ where: { categoryId: req.params.id } }),
+      prisma.category.count({ where: { parentId: req.params.id } }),
+      prisma.budgetTemplateLine.count({ where: { categoryId: req.params.id } }),
+      prisma.budget.count({ where: { categoryId: req.params.id } }),
+      prisma.plan.count({ where: { categoryId: req.params.id } }),
+    ]);
+    const decision = categoryRemovalDecision({
+      hasTransactions: transactions > 0,
+      hasChildren: children > 0,
+      hasBudgetLines: budgetLines > 0,
+      hasBudgets: budgets > 0,
+      hasPlans: plans > 0,
     });
 
-    if (count > 0) {
+    if (decision === 'deactivate') {
       const category = await prisma.category.update({
         where: { id: req.params.id },
         data: { isActive: false },
       });
-      return res.json({
-        ...category,
-        message: 'Categoria desativada (possui lançamentos vinculados)',
-      });
+      return res.json({ ...category, deactivated: true });
     }
 
     await prisma.category.delete({ where: { id: req.params.id } });

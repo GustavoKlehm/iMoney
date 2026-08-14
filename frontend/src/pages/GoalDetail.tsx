@@ -1,8 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type Goal } from '../api/client';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { removalCopy } from '../utils/confirmRemoval';
 import { formatCurrency } from '../utils/format';
 import './GoalDetail.css';
 
@@ -18,6 +21,8 @@ function formatDate(value: string): string {
 
 export function GoalDetailPage() {
   const { id = '' } = useParams();
+  const confirm = useConfirm();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [name, setName] = useState('');
@@ -66,6 +71,17 @@ export function GoalDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['goals'] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
       ]);
+    },
+  });
+
+  const removeGoal = useMutation({
+    mutationFn: () => api.plans.removeGoal(id),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['goals'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
+      navigate('/objetivos');
     },
   });
 
@@ -121,10 +137,33 @@ export function GoalDetailPage() {
           </div>
           <p className="subtitle">Cofrinho {goal.account.name}</p>
         </div>
-        <button type="button" className="goal-secondary-button" onClick={() => openEditor('edit')}>
-          Editar objetivo
-        </button>
+        <div className="goal-detail-header__actions">
+          <button type="button" className="goal-secondary-button" onClick={() => openEditor('edit')}>
+            Editar objetivo
+          </button>
+          <ItemActions
+            name={goal.name}
+            actions={[
+              {
+                id: 'remove',
+                label: 'Excluir',
+                danger: true,
+                disabled: removeGoal.isPending,
+                onSelect: () => {
+                  void confirm(removalCopy(goal.name, false)).then((ok) => {
+                    if (ok) removeGoal.mutate();
+                  });
+                },
+              },
+            ]}
+          />
+        </div>
       </header>
+      {removeGoal.error && (
+        <p className="goal-detail-feedback goal-detail-feedback--error" role="alert">
+          Erro: {(removeGoal.error as Error).message}
+        </p>
+      )}
 
       <section className="goal-detail-summary glass-module" aria-label="Progresso do objetivo">
         <div className="goal-detail-progress" aria-label={`${goal.progress}% do objetivo`}>

@@ -197,10 +197,15 @@
 .category-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
 
-.category-actions button {
+.category-actions .item-actions__trigger {
+  flex: 0 0 auto;
+}
+
+.category-actions button:not(.item-actions__trigger) {
   min-height: 44px;
   flex: 1 1 auto;
   padding: 0.625rem 0.875rem;

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type ApplyBudgetResult, type BudgetPeriod } from '../api/client';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { removalCopy } from '../utils/confirmRemoval';
 import { getCurrentPeriod, MONTH_NAMES } from '../utils/format';
 import './BudgetPlanDetail.css';
 
@@ -120,6 +123,8 @@ function MonthBudgetEditor({ period }: { period: BudgetPeriod }) {
 
 export function BudgetPlanDetailPage() {
   const { id = '' } = useParams();
+  const confirm = useConfirm();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentPeriod = getCurrentPeriod();
   const [lineValues, setLineValues] = useState<Record<string, string>>({});
@@ -185,6 +190,15 @@ export function BudgetPlanDetailPage() {
     },
   });
 
+  const removeTemplate = useMutation({
+    mutationFn: () => api.budgetTemplates.remove(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['budget-templates'] });
+      await queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      navigate('/planejamentos');
+    },
+  });
+
   const applyTemplate = useMutation({
     mutationFn: async () => {
       const [year, month] = startPeriod.split('-').map(Number);
@@ -240,9 +254,32 @@ export function BudgetPlanDetailPage() {
       </Link>
 
       <header className="page-header budget-plan-detail-header">
-        <h1>{template.name}</h1>
-        <p className="subtitle">Defina o molde, gere os meses e ajuste exceções</p>
+        <div>
+          <h1>{template.name}</h1>
+          <p className="subtitle">Defina o molde, gere os meses e ajuste exceções</p>
+        </div>
+        <ItemActions
+          name={template.name}
+          actions={[
+            {
+              id: 'remove',
+              label: 'Excluir',
+              danger: true,
+              disabled: removeTemplate.isPending,
+              onSelect: () => {
+                void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
+                  if (ok) removeTemplate.mutate();
+                });
+              },
+            },
+          ]}
+        />
       </header>
+      {removeTemplate.error && (
+        <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
+          Erro: {(removeTemplate.error as Error).message}
+        </p>
+      )}
 
       <section className="budget-detail-section glass-module">
         <div className="budget-detail-section__heading">

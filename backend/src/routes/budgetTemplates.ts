@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { budgetsToUpsert, monthSequence } from '../lib/budgetApply.js';
+import { templateRemovalDecision } from '../lib/removalDecision.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -35,10 +36,18 @@ const templateInclude = {
 router.get('/', async (_req, res, next) => {
   try {
     const templates = await prisma.budgetTemplate.findMany({
-      include: templateInclude,
+      include: {
+        ...templateInclude,
+        _count: { select: { budgets: true } },
+      },
       orderBy: { name: 'asc' },
     });
-    res.json(templates);
+    res.json(
+      templates.map(({ _count, ...template }) => ({
+        ...template,
+        hasGeneratedMonths: _count.budgets > 0,
+      })),
+    );
   } catch (error) {
     next(error);
   }
@@ -81,7 +90,10 @@ router.get('/:id', async (req, res, next) => {
     });
 
     if (!template) throw new AppError(404, 'Planejamento não encontrado');
-    res.json(template);
+    res.json({
+      ...template,
+      hasGeneratedMonths: template.budgets.length > 0,
+    });
   } catch (error) {
     next(error);
   }
@@ -169,6 +181,31 @@ router.post('/:id/apply', async (req, res, next) => {
     );
 
     res.json({ created: upsert.length, skipped });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const template = await prisma.budgetTemplate.findUnique({
+      where: { id: req.params.id },
+      include: { _count: { select: { budgets: true } } },
+    });
+    if (!template) throw new AppError(404, 'Planejamento não encontrado');
+
+    const decision = templateRemovalDecision(template._count.budgets > 0);
+    await prisma.$transaction(async (tx) => {
+      if (decision === 'unlink-and-delete') {
+        await tx.budget.updateMany({
+          where: { sourceTemplateId: template.id },
+          data: { sourceTemplateId: null },
+        });
+      }
+      await tx.budgetTemplate.delete({ where: { id: template.id } });
+    });
+
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

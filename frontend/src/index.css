@@ -82,7 +82,10 @@ body {
   min-height: 100vh;
 }
 
-/* ── Frosted glass surfaces ── */
+/* Superfícies de vidro.
+   Cards e módulos de página: .glass-module
+   Overlays flutuantes (menu ⋯, diálogo): .liquid-glass
+   Barra do header: .liquid-glass-bar */
 
 .liquid-glass,
 .card,
@@ -175,6 +178,7 @@ body {
 .tx-form > *,
 .page-loading > *,
 .page-error > *,
+.liquid-glass > *,
 .glass-module > *,
 .app-logo-wrap > * {
   position: relative;

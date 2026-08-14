@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { canBeDefault } from '../lib/accountRules.js';
+import { accountRemovalDecision } from '../lib/removalDecision.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
 
@@ -61,11 +62,23 @@ router.get('/', async (_req, res, next) => {
   try {
     const accounts = await prisma.account.findMany({
       orderBy: { sortOrder: 'asc' },
+      include: {
+        _count: {
+          select: {
+            transactionsFrom: true,
+            transactionsTo: true,
+            plans: true,
+            recurrences: true,
+          },
+        },
+      },
     });
     const accountsWithBalance = await Promise.all(
-      accounts.map(async (account) => ({
+      accounts.map(async ({ _count, ...account }) => ({
         ...account,
         balance: (await sumParts(account.id)).balance,
+        hasHistory:
+          _count.transactionsFrom + _count.transactionsTo + _count.plans + _count.recurrences > 0,
       })),
     );
 
@@ -192,6 +205,71 @@ router.patch('/:id', async (req, res, next) => {
     });
 
     res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const current = await findAccountOrThrow(req.params.id);
+    const [fromCount, toCount, goalCount, recurrenceCount, otherDefault] = await Promise.all([
+      prisma.transaction.count({ where: { accountId: current.id } }),
+      prisma.transaction.count({ where: { toAccountId: current.id } }),
+      prisma.plan.count({ where: { accountId: current.id } }),
+      prisma.recurrence.count({ where: { accountId: current.id } }),
+      prisma.account.findFirst({
+        where: { id: { not: current.id }, isReserved: false, isActive: true },
+      }),
+    ]);
+    const decision = accountRemovalDecision({
+      hasTransactions: fromCount + toCount > 0,
+      hasGoal: goalCount > 0,
+      hasRecurrence: recurrenceCount > 0,
+      isDefault: current.isDefault,
+      hasOtherActiveCommonAccount: Boolean(otherDefault),
+    });
+
+    if (decision === 'reject-default') {
+      throw new AppError(400, 'Cadastre outra conta antes de desativar a padrão');
+    }
+
+    if (decision === 'delete') {
+      await prisma.account.delete({ where: { id: current.id } });
+      return res.status(204).send();
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (current.isDefault) {
+        const replacement = await tx.account.findFirst({
+          where: {
+            id: { not: current.id },
+            isReserved: false,
+            isActive: true,
+          },
+          orderBy: { sortOrder: 'asc' },
+        });
+
+        if (!replacement) {
+          throw new AppError(400, 'Cadastre outra conta antes de desativar a padrão');
+        }
+
+        await tx.account.update({
+          where: { id: replacement.id },
+          data: { isDefault: true },
+        });
+      }
+
+      return tx.account.update({
+        where: { id: current.id },
+        data: {
+          isActive: false,
+          ...(current.isDefault ? { isDefault: false } : {}),
+        },
+      });
+    });
+
+    res.json({ ...updated, deactivated: true });
   } catch (error) {
     next(error);
   }

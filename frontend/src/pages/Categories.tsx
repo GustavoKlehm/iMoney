@@ -6,7 +6,10 @@ import {
   type CreateCategory,
   type TransactionType,
 } from '../api/client';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { removalCopy } from '../utils/confirmRemoval';
 import { TRANSACTION_TYPE_LABELS } from '../utils/format';
 import './Categories.css';
 
@@ -18,6 +21,7 @@ function sortChildren(children: Category[] = []) {
 }
 
 export function CategoriesPage() {
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const nameInputRef = useRef<HTMLInputElement>(null);
   const cancelEditRef = useRef(false);
@@ -172,14 +176,14 @@ export function CategoriesPage() {
     }
   }
 
-  function deactivate(category: Category) {
-    updateCategory.mutate({ id: category.id, data: { isActive: false } });
-  }
-
-  function remove(category: Category) {
-    if (window.confirm(`Excluir a subcategoria “${category.name}”?`)) {
+  async function remove(category: Category) {
+    if (await confirm(removalCopy(category.name, Boolean(category.hasHistory)))) {
       removeCategory.mutate(category.id);
     }
+  }
+
+  function reactivate(category: Category) {
+    updateCategory.mutate({ id: category.id, data: { isActive: true } });
   }
 
   function renderEditInput(category: Category) {
@@ -224,28 +228,38 @@ export function CategoriesPage() {
             )}
           </div>
 
-          <div className="category-actions" aria-label={`Ações de ${parent.name}`}>
-            <button
-              type="button"
-              disabled={!parent.isActive || mutationPending}
-              onClick={() => prepareChild(parent)}
-            >
-              Adicionar filha
-            </button>
-            <button
-              type="button"
-              disabled={mutationPending}
-              onClick={() => startEditing(parent)}
-            >
-              Editar
-            </button>
-            <button
-              type="button"
-              disabled={!parent.isActive || mutationPending}
-              onClick={() => deactivate(parent)}
-            >
-              Desativar
-            </button>
+          <div className="category-actions">
+            <ItemActions
+              name={parent.name}
+              actions={[
+                {
+                  id: 'edit',
+                  label: 'Editar',
+                  disabled: mutationPending,
+                  onSelect: () => startEditing(parent),
+                },
+                ...(parent.isActive
+                  ? [{
+                      id: 'child',
+                      label: 'Adicionar filha',
+                      disabled: mutationPending,
+                      onSelect: () => prepareChild(parent),
+                    }]
+                  : [{
+                      id: 'reactivate',
+                      label: 'Reativar',
+                      disabled: mutationPending,
+                      onSelect: () => reactivate(parent),
+                    }]),
+                {
+                  id: 'remove',
+                  label: 'Excluir',
+                  danger: true,
+                  disabled: mutationPending,
+                  onSelect: () => remove(parent),
+                },
+              ]}
+            />
           </div>
         </div>
 
@@ -260,29 +274,33 @@ export function CategoriesPage() {
                     {editingId === child.id ? renderEditInput(child) : <span>{child.name}</span>}
                     {!child.isActive && <span className="inactive-label">Inativa</span>}
                   </div>
-                  <div className="category-actions" aria-label={`Ações de ${child.name}`}>
-                    <button
-                      type="button"
-                      disabled={mutationPending}
-                      onClick={() => startEditing(child)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!child.isActive || mutationPending}
-                      onClick={() => deactivate(child)}
-                    >
-                      Desativar
-                    </button>
-                    <button
-                      type="button"
-                      className="category-action--danger"
-                      disabled={mutationPending}
-                      onClick={() => remove(child)}
-                    >
-                      Excluir
-                    </button>
+                  <div className="category-actions">
+                    <ItemActions
+                      name={child.name}
+                      actions={[
+                        {
+                          id: 'edit',
+                          label: 'Editar',
+                          disabled: mutationPending,
+                          onSelect: () => startEditing(child),
+                        },
+                        ...(child.isActive
+                          ? []
+                          : [{
+                              id: 'reactivate',
+                              label: 'Reativar',
+                              disabled: mutationPending,
+                              onSelect: () => reactivate(child),
+                            }]),
+                        {
+                          id: 'remove',
+                          label: 'Excluir',
+                          danger: true,
+                          disabled: mutationPending,
+                          onSelect: () => remove(child),
+                        },
+                      ]}
+                    />
                   </div>
                 </li>
               ))

@@ -1,8 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { AppLogo } from '../components/AppLogo';
+import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { useConfirm } from '../components/ConfirmProvider';
+import { transactionRemovalCopy } from '../utils/confirmRemoval';
 import {
   formatCurrency,
   formatDateTime,
@@ -12,11 +15,23 @@ import {
 import './Transactions.css';
 
 export function TransactionsPage() {
+  const confirm = useConfirm();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { year, month } = getCurrentPeriod();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['transactions', year, month],
     queryFn: () => api.transactions.list({ year, month, limit: 100 }),
+  });
+
+  const removeTransaction = useMutation({
+    mutationFn: api.transactions.remove,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
   });
 
   if (isLoading) return <PageLoading message="Carregando lançamentos..." />;
@@ -35,6 +50,12 @@ export function TransactionsPage() {
           Adicionar lançamento
         </Link>
       </header>
+
+      {removeTransaction.error && (
+        <div className="page-error" role="alert">
+          Erro: {(removeTransaction.error as Error).message}
+        </div>
+      )}
 
       {transactions.length === 0 ? (
         <div className="empty-state">
@@ -69,6 +90,29 @@ export function TransactionsPage() {
                 </span>
                 <span className="tx-date">{formatDateTime(tx.date)}</span>
               </div>
+              <ItemActions
+                name={tx.description}
+                actions={[
+                  ...(!tx.isCancelled
+                    ? [{
+                        id: 'edit',
+                        label: 'Editar',
+                        onSelect: () => navigate(`/lancamentos/novo?id=${encodeURIComponent(tx.id)}`),
+                      }]
+                    : []),
+                  {
+                    id: 'remove',
+                    label: 'Excluir',
+                    danger: true,
+                    disabled: removeTransaction.isPending,
+                    onSelect: () => {
+                      void confirm(transactionRemovalCopy(tx.description)).then((ok) => {
+                        if (ok) removeTransaction.mutate(tx.id);
+                      });
+                    },
+                  },
+                ]}
+              />
             </article>
           ))}
         </div>
@@ -76,3 +120,4 @@ export function TransactionsPage() {
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
 import { AnimatedOutlet } from './AnimatedOutlet';
 import { AppLogo } from './AppLogo';
+import { ConfirmProvider } from './ConfirmProvider';
 import { GlassNav } from './GlassNav';
 import { WallpaperBackground } from './WallpaperBackground';
 import { useAuth } from '../auth/AuthProvider';
@@ -48,7 +49,9 @@ export function Layout() {
       </header>
 
       <main className="main">
-        <AnimatedOutlet />
+        <ConfirmProvider>
+          <AnimatedOutlet />
+        </ConfirmProvider>
       </main>
     </div>
   );

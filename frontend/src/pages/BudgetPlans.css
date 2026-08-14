@@ -48,25 +48,33 @@
 
 .budget-plan-card {
   display: flex;
+  position: relative;
   min-height: 132px;
   flex-direction: column;
   justify-content: center;
   padding: 1.25rem;
   border-radius: var(--radius-module);
+}
+
+.budget-plan-card__toolbar {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+}
+
+.budget-plan-card__hit {
+  display: flex;
+  min-height: 132px;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 3.25rem;
   color: var(--text);
   text-decoration: none;
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast);
 }
 
-.budget-plan-card:hover {
-  border-color: var(--lg-border);
-  background: var(--lg-tint-hover);
-}
-
-.budget-plan-card:focus-visible {
+.budget-plan-card__hit:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
