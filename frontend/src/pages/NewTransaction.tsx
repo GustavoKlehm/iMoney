@@ -1,20 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { api, type Responsible } from '../api/client';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api, type TransactionType } from '../api/client';
 import { AppLogo } from '../components/AppLogo';
 import './NewTransaction.css';
 
+function nowLocal(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function getInitialType(value: string | null): TransactionType {
+  return value === 'INCOME' || value === 'EXPENSE' || value === 'TRANSFER'
+    ? value
+    : 'EXPENSE';
+}
+
 export function NewTransactionPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
+  const [type, setType] = useState<TransactionType>(() => getInitialType(searchParams.get('type')));
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [accountId, setAccountId] = useState('');
-  const [responsible, setResponsible] = useState<Responsible>('COUPLE');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [accountId, setAccountId] = useState(() => searchParams.get('accountId') ?? '');
+  const [toAccountId, setToAccountId] = useState(() => searchParams.get('toAccountId') ?? '');
+  const [date, setDate] = useState(nowLocal);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -26,9 +40,29 @@ export function NewTransactionPage() {
     queryFn: api.accounts.list,
   });
 
-  const expenseCategories = categories?.filter(
-    (c) => c.type === 'EXPENSE' && c.isActive && c.parentId,
+  const availableCategories = categories?.filter(
+    (category) => category.type === type && category.isActive && category.parentId,
   ) ?? [];
+  const activeAccounts = accounts?.filter((account) => account.isActive) ?? [];
+  const transferDisabled = accounts === undefined || activeAccounts.length < 2;
+
+  useEffect(() => {
+    if (!accounts) return;
+    const defaultId = accounts.find((account) => account.isActive && account.isDefault)?.id ?? '';
+    setAccountId((current) => current || defaultId);
+  }, [accounts]);
+
+  useEffect(() => {
+    if (toAccountId && toAccountId === accountId) {
+      setToAccountId('');
+    }
+  }, [accountId, toAccountId]);
+
+  useEffect(() => {
+    if (accounts && transferDisabled && type === 'TRANSFER') {
+      setType('EXPENSE');
+    }
+  }, [accounts, transferDisabled, type]);
 
   const mutation = useMutation({
     mutationFn: api.transactions.create,
@@ -42,30 +76,70 @@ export function NewTransactionPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsedAmount = parseFloat(amount.replace(',', '.'));
-    if (!parsedAmount || !description || !categoryId) return;
+    if (!parsedAmount || !description.trim() || !date) return;
 
-    mutation.mutate({
+    const baseTransaction = {
       date,
       amount: parsedAmount,
-      type: 'EXPENSE',
-      description,
-      categoryId,
+      type,
+      description: description.trim(),
       accountId: accountId || undefined,
-      responsible,
-    });
+    };
+
+    if (type === 'TRANSFER') {
+      if (!accountId || !toAccountId || accountId === toAccountId) return;
+      mutation.mutate({ ...baseTransaction, toAccountId });
+      return;
+    }
+
+    if (!categoryId) return;
+    mutation.mutate({ ...baseTransaction, categoryId });
+  }
+
+  function selectType(nextType: TransactionType) {
+    if (nextType === 'TRANSFER' && transferDisabled) return;
+    setType(nextType);
+    setCategoryId('');
+  }
+
+  function selectOrigin(nextAccountId: string) {
+    setAccountId(nextAccountId);
+    if (nextAccountId === toAccountId) setToAccountId('');
   }
 
   return (
     <div className="new-transaction">
       <header className="page-header">
-        <h1>Registrar gasto</h1>
-        <p className="subtitle">Rápido — ideal para usar no celular</p>
+        <h1>Novo lançamento</h1>
+        <p className="subtitle">Registre uma movimentação financeira</p>
       </header>
 
       <form className="tx-form" onSubmit={handleSubmit}>
         <div className="tx-form__logo-wrap">
           <AppLogo size="md" />
         </div>
+        <div className="transaction-type" role="group" aria-label="Tipo de lançamento">
+          {([
+            ['INCOME', 'Entrada'],
+            ['EXPENSE', 'Saída'],
+            ['TRANSFER', 'Transferência'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={type === value ? 'active' : ''}
+              aria-pressed={type === value}
+              disabled={value === 'TRANSFER' && transferDisabled}
+              onClick={() => selectType(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {accounts !== undefined && transferDisabled && (
+          <p className="transfer-hint">Cadastre contas em Cadastros → Contas.</p>
+        )}
+
         <div className="form-group amount-group">
           <label htmlFor="amount">Valor (R$)</label>
           <input
@@ -85,67 +159,91 @@ export function NewTransactionPage() {
           <input
             id="description"
             type="text"
-            placeholder="Ex: mercado Carrefour"
+            placeholder="Ex: mercado, salário ou reserva"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="category">Categoria</label>
-          <select
-            id="category"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
-          >
-            <option value="">Selecione...</option>
-            {expenseCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
-        </div>
+        {type !== 'TRANSFER' && (
+          <div className="form-group">
+            <label htmlFor="category">Categoria</label>
+            <select
+              id="category"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              required
+            >
+              <option value="">Selecione...</option>
+              {availableCategories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="date">Data</label>
+            <label htmlFor="date">Data e hora</label>
             <input
               id="date"
-              type="date"
+              type="datetime-local"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="responsible">Quem gastou</label>
-            <select
-              id="responsible"
-              value={responsible}
-              onChange={(e) => setResponsible(e.target.value as Responsible)}
-            >
-              <option value="USER">Gustavo</option>
-              <option value="PARTNER">Noiva</option>
-              <option value="COUPLE">Casal</option>
-            </select>
-          </div>
+          {type !== 'TRANSFER' && activeAccounts.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="account">Conta (opcional)</label>
+              <select
+                id="account"
+                value={accountId}
+                onChange={(e) => selectOrigin(e.target.value)}
+              >
+                <option value="">Não especificar</option>
+                {activeAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {accounts && accounts.length > 0 && (
-          <div className="form-group">
-            <label htmlFor="account">Conta (opcional)</label>
-            <select
-              id="account"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-            >
-              <option value="">Não especificar</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>{acc.name}</option>
-              ))}
-            </select>
+        {type === 'TRANSFER' && (
+          <div className="form-row transfer-accounts">
+            <div className="form-group">
+              <label htmlFor="account">Conta de origem</label>
+              <select
+                id="account"
+                value={accountId}
+                onChange={(e) => selectOrigin(e.target.value)}
+                required
+              >
+                <option value="">Selecione...</option>
+                {activeAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="to-account">Conta de destino</label>
+              <select
+                id="to-account"
+                value={toAccountId}
+                onChange={(e) => setToAccountId(e.target.value)}
+                required
+              >
+                <option value="">Selecione...</option>
+                {activeAccounts
+                  .filter((account) => account.id !== accountId)
+                  .map((account) => (
+                    <option key={account.id} value={account.id}>{account.name}</option>
+                  ))}
+              </select>
+            </div>
           </div>
         )}
 
@@ -154,7 +252,7 @@ export function NewTransactionPage() {
         )}
 
         <button type="submit" className="btn-submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Salvando...' : 'Salvar gasto'}
+          {mutation.isPending ? 'Salvando...' : 'Salvar'}
         </button>
       </form>
     </div>

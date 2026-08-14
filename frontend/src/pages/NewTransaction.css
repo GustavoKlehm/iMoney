@@ -15,6 +15,58 @@
   margin-bottom: 0.25rem;
 }
 
+.transaction-type {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.transaction-type button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.625rem 0.5rem;
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.transaction-type button:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.transaction-type button.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.transaction-type button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.transaction-type button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.transfer-hint {
+  margin-top: -0.75rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 .tx-form .form-group {
   display: flex;
   flex-direction: column;
@@ -32,6 +84,7 @@
 .tx-form .form-group input,
 .tx-form .form-group select {
   width: 100%;
+  min-height: 44px;
   padding: 0.625rem 0;
   border: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.45);
@@ -76,6 +129,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
+}
+
+.transfer-accounts {
+  margin-top: -0.25rem;
 }
 
 .tx-form .btn-submit {

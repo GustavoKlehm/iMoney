@@ -6,8 +6,21 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date + 'T12:00:00') : date;
+  const d = typeof date === 'string'
+    ? new Date(date.includes('T') ? date : `${date}T12:00:00`)
+    : date;
   return d.toLocaleDateString('pt-BR');
+}
+
+export function formatDateTime(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function getCurrentPeriod(): { year: number; month: number } {

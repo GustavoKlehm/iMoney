@@ -1,3 +1,16 @@
+.transactions-page .page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+}
+
+.transactions-page .page-header .btn-primary {
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
 .transactions-list {
   display: flex;
   flex-direction: column;
@@ -34,10 +47,24 @@
 }
 
 .tx-desc {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tx-badge {
+  flex-shrink: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .tx-meta {
@@ -62,6 +89,7 @@
 
 .tx-amount.income { color: var(--success); }
 .tx-amount.expense { color: var(--danger); }
+.tx-amount.transfer { color: var(--primary); }
 
 .tx-date {
   font-size: 0.72rem;
@@ -95,4 +123,24 @@
 .empty-state .btn-primary {
   width: 100%;
   max-width: 280px;
+}
+
+@media (max-width: 480px) {
+  .transactions-page .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .transactions-page .page-header .btn-primary {
+    width: 100%;
+  }
+
+  .transaction-row {
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .tx-desc {
+    white-space: normal;
+  }
 }

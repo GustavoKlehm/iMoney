@@ -7,7 +7,7 @@ import { AppError } from '../middleware/errorHandler.js';
 const router = Router();
 
 const baseTransactionSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/),
   amount: z.number().positive(),
   type: z.nativeEnum(TransactionType),
   description: z.string().min(1).max(500),
@@ -63,8 +63,8 @@ router.get('/', async (req, res, next) => {
     }
     if (query.year && query.month) {
       const start = new Date(query.year, query.month - 1, 1);
-      const end = new Date(query.year, query.month, 0);
-      where.date = { gte: start, lte: end };
+      const end = new Date(query.year, query.month, 1);
+      where.date = { gte: start, lt: end };
     }
 
     const [transactions, total] = await Promise.all([

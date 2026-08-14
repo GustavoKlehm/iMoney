@@ -111,6 +111,8 @@ export interface Transaction {
   isCancelled: boolean;
   category: Category | null;
   account: Account | null;
+  toAccount: Account | null;
+  isOpeningBalance?: boolean;
 }
 
 export interface CreateCategory {
@@ -127,7 +129,6 @@ export interface CreateTransaction {
   categoryId?: string;
   accountId?: string;
   toAccountId?: string;
-  responsible?: Responsible;
 }
 
 export interface TransactionListParams {
