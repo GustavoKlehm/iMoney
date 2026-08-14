@@ -72,6 +72,36 @@ export const api = {
     cancel: (id: string) =>
       request<Transaction>(`/transactions/${id}/cancel`, { method: 'POST' }),
   },
+
+  budgetTemplates: {
+    list: () => request<BudgetTemplate[]>('/budget-templates'),
+    create: (data: CreateBudgetTemplate) =>
+      request<BudgetTemplate>('/budget-templates', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    get: (id: string) => request<BudgetTemplate>(`/budget-templates/${id}`),
+    update: (id: string, data: UpdateBudgetTemplate) =>
+      request<BudgetTemplate>(`/budget-templates/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    apply: (id: string, data: ApplyBudgetTemplate) =>
+      request<ApplyBudgetResult>(`/budget-templates/${id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  budgets: {
+    list: (year: number, month: number) =>
+      request<Budget[]>(`/budgets?year=${year}&month=${month}`),
+    update: (id: string, data: { limitAmount: number }) =>
+      request<Budget>(`/budgets/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+  },
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -144,6 +174,63 @@ export interface TransactionListParams {
 export interface TransactionListResponse {
   data: Transaction[];
   total: number;
+}
+
+export interface BudgetTemplateLine {
+  id: string;
+  templateId: string;
+  categoryId: string;
+  amount: string;
+  category: Category;
+}
+
+export interface BudgetPeriod {
+  year: number;
+  month: number;
+}
+
+export interface BudgetTemplate {
+  id: string;
+  name: string;
+  lines: BudgetTemplateLine[];
+  budgets?: BudgetPeriod[];
+}
+
+export interface Budget {
+  id: string;
+  categoryId: string;
+  sourceTemplateId: string | null;
+  year: number;
+  month: number;
+  limitAmount: string;
+  category: Category;
+}
+
+export interface BudgetTemplateLineInput {
+  categoryId: string;
+  amount: number;
+}
+
+export interface CreateBudgetTemplate {
+  name: string;
+  lines: BudgetTemplateLineInput[];
+}
+
+export interface UpdateBudgetTemplate {
+  name?: string;
+  lines?: BudgetTemplateLineInput[];
+}
+
+export interface ApplyBudgetTemplate {
+  startYear: number;
+  startMonth: number;
+  months: number;
+  overwrite: boolean;
+}
+
+export interface ApplyBudgetResult {
+  created: number;
+  skipped: number;
 }
 
 export interface BudgetProgress {

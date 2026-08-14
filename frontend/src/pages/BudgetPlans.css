@@ -1,0 +1,112 @@
+.budget-plans-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.budget-plans-header__action {
+  width: 100%;
+}
+
+.budget-plan-form {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-module);
+}
+
+.budget-plans-feedback {
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: var(--radius-sm);
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.budget-plans-empty {
+  padding: 2rem 1.25rem;
+  border-radius: var(--radius-module);
+  text-align: center;
+}
+
+.budget-plans-empty h2 {
+  margin-bottom: 0.375rem;
+  font-size: 1.125rem;
+}
+
+.budget-plans-empty p {
+  color: var(--text-muted);
+}
+
+.budget-plans-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.budget-plan-card {
+  display: flex;
+  min-height: 132px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.25rem;
+  border-radius: var(--radius-module);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.budget-plan-card:hover {
+  border-color: var(--lg-border);
+  background: var(--lg-tint-hover);
+}
+
+.budget-plan-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.budget-plan-card__name {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.budget-plan-card__summary {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.budget-plan-card__action {
+  margin-top: 1rem;
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .budget-plans-header {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .budget-plans-header__action {
+    width: auto;
+  }
+
+  .budget-plan-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    padding: 1.5rem;
+  }
+
+  .budget-plans-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

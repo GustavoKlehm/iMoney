@@ -8,6 +8,8 @@ import { CategoriesPage } from './pages/Categories';
 import { CadastrosPage } from './pages/Cadastros';
 import { AccountsPage } from './pages/Accounts';
 import { LoginPage } from './pages/Login';
+import { BudgetPlansPage } from './pages/BudgetPlans';
+import { BudgetPlanDetailPage } from './pages/BudgetPlanDetail';
 
 function ProtectedRoutes() {
   const { session, loading } = useAuth();
@@ -32,6 +34,8 @@ function App() {
               <Route path="cadastros" element={<CadastrosPage />} />
               <Route path="contas" element={<AccountsPage />} />
               <Route path="categorias" element={<CategoriesPage />} />
+              <Route path="planejamentos" element={<BudgetPlansPage />} />
+              <Route path="planejamentos/:id" element={<BudgetPlanDetailPage />} />
             </Route>
           </Route>
         </Routes>
