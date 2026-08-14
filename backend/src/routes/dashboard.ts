@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { isGoalAchieved } from '../lib/goal.js';
+import { monthRange } from '../lib/monthRange.js';
 import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -16,9 +17,8 @@ const monthQuerySchema = z.object({
 router.get('/monthly', async (req, res, next) => {
   try {
     const { year, month } = monthQuerySchema.parse(req.query);
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 0);
-    const daysInMonth = end.getDate();
+    const { start, end } = monthRange(year, month);
+    const daysInMonth = new Date(year, month, 0).getDate();
     const today = new Date();
     const isCurrentMonth =
       today.getFullYear() === year && today.getMonth() === month - 1;
@@ -28,7 +28,7 @@ router.get('/monthly', async (req, res, next) => {
     const [incomeAgg, expenseAgg, budgets, expensesByCategory] = await Promise.all([
       prisma.transaction.aggregate({
         where: {
-          date: { gte: start, lte: end },
+          date: { gte: start, lt: end },
           type: TransactionType.INCOME,
           isCancelled: false,
           isOpeningBalance: false,
@@ -36,7 +36,7 @@ router.get('/monthly', async (req, res, next) => {
         _sum: { amount: true },
       }),
       prisma.transaction.aggregate({
-        where: { date: { gte: start, lte: end }, type: TransactionType.EXPENSE, isCancelled: false },
+        where: { date: { gte: start, lt: end }, type: TransactionType.EXPENSE, isCancelled: false },
         _sum: { amount: true },
       }),
       prisma.budget.findMany({
@@ -45,7 +45,7 @@ router.get('/monthly', async (req, res, next) => {
       }),
       prisma.transaction.groupBy({
         by: ['categoryId'],
-        where: { date: { gte: start, lte: end }, type: TransactionType.EXPENSE, isCancelled: false },
+        where: { date: { gte: start, lt: end }, type: TransactionType.EXPENSE, isCancelled: false },
         _sum: { amount: true },
       }),
     ]);
@@ -137,7 +137,7 @@ router.get('/monthly', async (req, res, next) => {
 
     const upcomingOccurrences = await prisma.recurrenceOccurrence.findMany({
       where: {
-        dueDate: { gte: start, lte: new Date(year, month + 2, 0) },
+        dueDate: { gte: start, lt: new Date(year, month + 2, 1) },
         status: 'PENDING',
       },
       include: { recurrence: { include: { category: true } } },

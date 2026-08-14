@@ -76,14 +76,14 @@ export function NewTransactionPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsedAmount = parseFloat(amount.replace(',', '.'));
-    if (!parsedAmount || !description.trim() || !date) return;
+    if (!parsedAmount || !description.trim() || !date || !accountId) return;
 
     const baseTransaction = {
       date,
       amount: parsedAmount,
       type,
       description: description.trim(),
-      accountId: accountId || undefined,
+      accountId,
     };
 
     if (type === 'TRANSFER') {
@@ -195,15 +195,16 @@ export function NewTransactionPage() {
             />
           </div>
 
-          {type !== 'TRANSFER' && activeAccounts.length > 0 && (
+          {type !== 'TRANSFER' && (
             <div className="form-group">
-              <label htmlFor="account">Conta (opcional)</label>
+              <label htmlFor="account">Conta de origem</label>
               <select
                 id="account"
                 value={accountId}
                 onChange={(e) => selectOrigin(e.target.value)}
+                required
               >
-                <option value="">Não especificar</option>
+                <option value="">Selecione...</option>
                 {activeAccounts.map((account) => (
                   <option key={account.id} value={account.id}>{account.name}</option>
                 ))}
