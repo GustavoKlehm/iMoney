@@ -5,7 +5,8 @@ import { PageLoading } from '../components/PageLoading';
 import { formatCurrency, getCurrentPeriod, MONTH_NAMES, PACE_STATUS_LABELS } from '../utils/format';
 import './Dashboard.css';
 
-function paceVariant(status: PaceStatus | null): 'success' | 'warning' | 'danger' {
+function paceVariant(status: PaceStatus | null): 'default' | 'success' | 'warning' | 'danger' {
+  if (status === null) return 'default';
   if (status === 'warning') return 'warning';
   if (status === 'over_pace' || status === 'over_limit') return 'danger';
   return 'success';
