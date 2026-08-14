@@ -4,26 +4,62 @@
 }
 
 .budget-plan-detail-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-.budget-plan-detail-header__actions {
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-steps__item button {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.75rem;
   width: 100%;
-}
-
-.budget-plan-detail-header__save {
   min-height: 44px;
-  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.125rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--lg-tint-cell);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.wizard-steps__item button span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.wizard-steps__item--current button {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--text);
+}
+
+.wizard-steps__item--done button {
+  color: var(--text);
+}
+
+.wizard-steps__item button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.wizard-steps__item button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
 .budget-detail-section {
@@ -47,7 +83,6 @@
   font-size: 0.875rem;
 }
 
-.budget-lines-form,
 .budget-apply-form {
   display: grid;
   gap: 1rem;
@@ -118,40 +153,30 @@
   box-shadow: 0 0 0 1px var(--primary);
 }
 
-.budget-overwrite {
+.budget-end-period {
   display: flex;
   min-height: 48px;
-  align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-}
-
-.budget-overwrite input {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-
-.budget-overwrite span {
-  display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--lg-tint-cell);
 }
 
-.budget-overwrite small {
+.budget-end-period span {
   color: var(--text-muted);
   font-size: 0.75rem;
 }
 
-.budget-overwrite:has(input:focus-visible) {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
-  border-radius: var(--radius-sm);
+.budget-end-period strong {
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .budget-detail-feedback {
-  margin-top: 1rem;
+  margin: 0;
   padding: 0.875rem 1rem;
   border: 1px solid rgba(110, 231, 160, 0.32);
   border-radius: var(--radius-sm);
@@ -168,7 +193,8 @@
 }
 
 .budget-months-section {
-  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.75rem;
 }
 
 .budget-months {
@@ -206,11 +232,48 @@
   border-bottom: 0;
 }
 
-.budget-month__error {
-  padding: 0.75rem;
-  border: 1px solid rgba(248, 113, 113, 0.28);
-  border-radius: var(--radius-sm);
+.wizard-nav {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.wizard-nav__back {
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--radius-pill);
+  background: var(--lg-tint);
+  backdrop-filter: var(--lg-blur);
+  -webkit-backdrop-filter: var(--lg-blur);
+  box-shadow: var(--lg-rim);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
   font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.wizard-nav__back:hover:not(:disabled) {
+  border-color: var(--lg-border);
+  background: var(--lg-tint-hover);
+}
+
+.wizard-nav__back:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.wizard-nav__back:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .wizard-nav__back {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(45, 27, 78, 0.94);
+  }
 }
 
 @media (min-width: 768px) {
@@ -218,14 +281,11 @@
     text-align: left;
   }
 
-  .budget-plan-detail-header__actions {
-    width: auto;
-    flex: 0 0 auto;
-  }
-
-  .budget-plan-detail-header__save {
-    width: auto;
-    min-width: 190px;
+  .wizard-steps__item button {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
   }
 
   .budget-detail-section {
@@ -243,13 +303,23 @@
     align-items: end;
   }
 
-  .budget-overwrite {
-    align-self: center;
+  .budget-end-period {
+    grid-column: 1 / -1;
   }
 
-  .budget-apply-form .btn-submit {
+  .wizard-nav {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .wizard-nav .btn-submit {
     justify-self: end;
     min-width: 190px;
+  }
+
+  .wizard-nav__back {
+    justify-self: start;
+    width: max-content;
+    padding-inline: 1.25rem;
   }
 }
 

@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api, type ApplyBudgetResult, type BudgetPeriod } from '../api/client';
-import { ItemActions } from '../components/ItemActions';
+import { api, type BudgetPeriod } from '../api/client';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
-import { useConfirm } from '../components/ConfirmProvider';
-import { removalCopy } from '../utils/confirmRemoval';
 import { getCurrentPeriod, MONTH_NAMES } from '../utils/format';
 import './BudgetPlanDetail.css';
+
+const STEPS = [
+  { id: 1, title: 'Limites gerais', short: 'Limites' },
+  { id: 2, title: 'Período', short: 'Período' },
+  { id: 3, title: 'Ajustes por mês', short: 'Ajustes' },
+] as const;
 
 function periodKey(period: BudgetPeriod) {
   return `${period.year}-${String(period.month).padStart(2, '0')}`;
@@ -18,68 +21,45 @@ function periodLabel(period: BudgetPeriod) {
   return `${MONTH_NAMES[period.month - 1]} de ${period.year}`;
 }
 
-function MonthBudgetEditor({
-  period,
-  drafts,
-  onDraftChange,
-}: {
-  period: BudgetPeriod;
-  drafts: Record<string, number>;
-  onDraftChange: (budgetId: string, amount: number) => void;
-}) {
-  const budgetsQuery = useQuery({
-    queryKey: ['budgets', period.year, period.month],
-    queryFn: () => api.budgets.list(period.year, period.month),
-  });
-
-  if (budgetsQuery.isLoading) {
-    return <p className="budget-month__status">Carregando limites...</p>;
+function monthSequence(
+  startYear: number,
+  startMonth: number,
+  count: number,
+): BudgetPeriod[] {
+  const out: BudgetPeriod[] = [];
+  let year = startYear;
+  let month = startMonth;
+  for (let i = 0; i < count; i += 1) {
+    out.push({ year, month });
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
   }
+  return out;
+}
 
-  if (budgetsQuery.error) {
-    return (
-      <p className="budget-month__error" role="alert">
-        Erro: {(budgetsQuery.error as Error).message}
-      </p>
-    );
+function parsePeriod(value: string): BudgetPeriod | null {
+  const [year, month] = value.split('-').map(Number);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null;
   }
-
-  const budgets = budgetsQuery.data ?? [];
-  if (budgets.length === 0) {
-    return <p className="budget-month__status">Nenhum limite neste mês.</p>;
-  }
-
-  return (
-    <div className="budget-month__limits">
-      {budgets.map((budget) => (
-        <div key={budget.id} className="budget-month__limit">
-          <label htmlFor={`budget-${budget.id}`}>{budget.category.name}</label>
-          <div className="budget-money-field">
-            <span aria-hidden="true">R$</span>
-            <MoneyInput
-              id={`budget-${budget.id}`}
-              value={drafts[budget.id] ?? Number(budget.limitAmount)}
-              onChange={(nextValue) => onDraftChange(budget.id, nextValue)}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return { year, month };
 }
 
 export function BudgetPlanDetailPage() {
   const { id = '' } = useParams();
-  const confirm = useConfirm();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentPeriod = getCurrentPeriod();
+  const [step, setStep] = useState(1);
   const [lineValues, setLineValues] = useState<Record<string, number>>({});
-  const [monthDrafts, setMonthDrafts] = useState<Record<string, number>>({});
   const [startPeriod, setStartPeriod] = useState(periodKey(currentPeriod));
   const [months, setMonths] = useState('3');
-  const [overwrite, setOverwrite] = useState(false);
-  const [applyFeedback, setApplyFeedback] = useState<ApplyBudgetResult | null>(null);
+  const [monthValues, setMonthValues] = useState<Record<string, Record<string, number>>>({});
+  const periodInitRef = useRef(false);
+  const touchedMonthsRef = useRef(new Set<string>());
 
   const templateQuery = useQuery({
     queryKey: ['budget-template', id],
@@ -120,69 +100,110 @@ export function BudgetPlanDetailPage() {
         ]),
       ),
     );
+
+    if (periodInitRef.current) return;
+    const generated = [...(templateQuery.data.budgets ?? [])].sort(
+      (first, second) => first.year - second.year || first.month - second.month,
+    );
+    if (generated.length === 0) return;
+    periodInitRef.current = true;
+    setStartPeriod(periodKey(generated[0]));
+    setMonths(String(generated.length));
   }, [templateQuery.data]);
 
   const templateLines = expenseChildren.map((category) => ({
     categoryId: category.id,
     amount: lineValues[category.id] || 0,
   }));
+  const hasPositiveLimits = templateLines.some((line) => line.amount > 0);
+  const monthCount = Number(months);
+  const validMonths = Number.isInteger(monthCount) && monthCount >= 1 && monthCount <= 36;
+  const start = parsePeriod(startPeriod);
+  const periods = start && validMonths
+    ? monthSequence(start.year, start.month, monthCount)
+    : [];
+  const endPeriod = periods.at(-1) ?? null;
 
   const savePlan = useMutation({
     mutationFn: async (input: {
       lines: { categoryId: string; amount: number }[];
-      drafts: Record<string, number>;
+      startYear: number;
+      startMonth: number;
+      monthCount: number;
+      periods: BudgetPeriod[];
+      drafts: Record<string, Record<string, number>>;
     }) => {
       await api.budgetTemplates.update(id, { lines: input.lines });
-      const monthUpdates = Object.entries(input.drafts).filter(([, amount]) => amount > 0);
+      await api.budgetTemplates.apply(id, {
+        startYear: input.startYear,
+        startMonth: input.startMonth,
+        months: input.monthCount,
+        overwrite: true,
+      });
+
       await Promise.all(
-        monthUpdates.map(([budgetId, limitAmount]) =>
-          api.budgets.update(budgetId, { limitAmount }),
-        ),
+        input.periods.map(async (period) => {
+          const drafts = input.drafts[periodKey(period)] ?? {};
+          const budgets = await api.budgets.list(period.year, period.month);
+          await Promise.all(
+            budgets.map((budget) => {
+              const amount = drafts[budget.categoryId];
+              if (!amount || amount === Number(budget.limitAmount)) return undefined;
+              return api.budgets.update(budget.id, { limitAmount: amount });
+            }),
+          );
+        }),
       );
     },
     onSuccess: async () => {
-      setMonthDrafts({});
-      await queryClient.invalidateQueries({ queryKey: ['budget-template', id] });
-      await queryClient.invalidateQueries({ queryKey: ['budget-templates'] });
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] });
-    },
-  });
-
-  const removeTemplate = useMutation({
-    mutationFn: () => api.budgetTemplates.remove(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['budget-templates'] });
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['budget-template', id] }),
+        queryClient.invalidateQueries({ queryKey: ['budget-templates'] }),
+        queryClient.invalidateQueries({ queryKey: ['budgets'] }),
+      ]);
       navigate('/planejamentos');
     },
   });
 
-  const applyTemplate = useMutation({
-    mutationFn: async () => {
-      const [year, month] = startPeriod.split('-').map(Number);
-      await api.budgetTemplates.update(id, { lines: templateLines });
-      return api.budgetTemplates.apply(id, {
-        startYear: year,
-        startMonth: month,
-        months: Number(months),
-        overwrite,
-      });
-    },
-    onSuccess: async (result) => {
-      setApplyFeedback(result);
-      await queryClient.invalidateQueries({ queryKey: ['budget-template', id] });
-      await queryClient.invalidateQueries({ queryKey: ['budgets'] });
-    },
-  });
+  function seedMonthDrafts() {
+    setMonthValues((current) => {
+      const next: Record<string, Record<string, number>> = {};
+      for (const period of periods) {
+        const key = periodKey(period);
+        next[key] = current[key] ?? { ...lineValues };
+      }
+      return next;
+    });
 
-  function handleSavePlan() {
-    savePlan.mutate({ lines: templateLines, drafts: monthDrafts });
+    void Promise.all(
+      periods.map(async (period) => {
+        const key = periodKey(period);
+        if (touchedMonthsRef.current.has(key)) return;
+        try {
+          const budgets = await api.budgets.list(period.year, period.month);
+          if (touchedMonthsRef.current.has(key) || budgets.length === 0) return;
+          setMonthValues((current) => ({
+            ...current,
+            [key]: Object.fromEntries(
+              budgets.map((budget) => [budget.categoryId, Number(budget.limitAmount)]),
+            ),
+          }));
+        } catch {
+          /* mantém a cópia do molde */
+        }
+      }),
+    );
   }
 
-  function handleApply(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setApplyFeedback(null);
-    applyTemplate.mutate();
+  function goNext() {
+    if (step === 1 && !hasPositiveLimits) return;
+    if (step === 2 && (!start || !validMonths)) return;
+    if (step === 2) seedMonthDrafts();
+    setStep((current) => Math.min(3, current + 1));
+  }
+
+  function goBack() {
+    setStep((current) => Math.max(1, current - 1));
   }
 
   if (templateQuery.isLoading || categoriesQuery.isLoading) {
@@ -197,196 +218,217 @@ export function BudgetPlanDetailPage() {
   const template = templateQuery.data;
   if (!template) return <div className="page-error">Planejamento não encontrado.</div>;
 
-  const generatedPeriods = [...(template.budgets ?? [])].sort(
-    (first, second) => second.year - first.year || second.month - first.month,
-  );
-  const validMonths = Number.isInteger(Number(months))
-    && Number(months) >= 1
-    && Number(months) <= 36;
+  const currentStep = STEPS[step - 1];
+  const canGoNext = step === 1 ? hasPositiveLimits : Boolean(start && validMonths);
 
   return (
     <div className="budget-plan-detail-page">
       <header className="page-header budget-plan-detail-header">
         <div>
           <h1>{template.name}</h1>
-          <p className="subtitle">Defina o molde, gere os meses e ajuste exceções</p>
-        </div>
-        <div className="budget-plan-detail-header__actions">
-          <button
-            type="button"
-            className="btn-submit budget-plan-detail-header__save"
-            disabled={savePlan.isPending || applyTemplate.isPending}
-            onClick={handleSavePlan}
-          >
-            {savePlan.isPending ? 'Salvando...' : 'Salvar planejamento'}
-          </button>
-          <ItemActions
-            name={template.name}
-            actions={[
-              {
-                id: 'remove',
-                label: 'Excluir',
-                danger: true,
-                disabled: removeTemplate.isPending,
-                onSelect: () => {
-                  void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
-                    if (ok) removeTemplate.mutate();
-                  });
-                },
-              },
-            ]}
-          />
+          <p className="subtitle">
+            Etapa {step} de {STEPS.length} · {currentStep.title}
+          </p>
         </div>
       </header>
+
+      <ol className="wizard-steps" aria-label="Etapas do planejamento">
+        {STEPS.map((item) => (
+          <li
+            key={item.id}
+            className={
+              item.id === step
+                ? 'wizard-steps__item wizard-steps__item--current'
+                : item.id < step
+                  ? 'wizard-steps__item wizard-steps__item--done'
+                  : 'wizard-steps__item'
+            }
+          >
+            <button
+              type="button"
+              disabled={item.id > step}
+              aria-current={item.id === step ? 'step' : undefined}
+              onClick={() => {
+                if (item.id < step) setStep(item.id);
+              }}
+            >
+              <span>{item.id}</span>
+              {item.short}
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      {step === 1 && (
+        <section className="budget-detail-section glass-module">
+          <div className="budget-detail-section__heading">
+            <h2>Limites gerais</h2>
+            <p>Defina os valores padrão. Vazios não entram no planejamento.</p>
+          </div>
+          {expenseChildren.length === 0 ? (
+            <p className="budget-detail-empty">
+              Cadastre subcategorias de saída antes de montar o planejamento.
+            </p>
+          ) : (
+            <div className="budget-lines">
+              {expenseChildren.map((category) => (
+                <label key={category.id} className="budget-line" htmlFor={`line-${category.id}`}>
+                  <span>
+                    <strong>{category.name}</strong>
+                    <small>{category.parentName}</small>
+                  </span>
+                  <span className="budget-money-field">
+                    <span aria-hidden="true">R$</span>
+                    <MoneyInput
+                      id={`line-${category.id}`}
+                      value={lineValues[category.id] ?? 0}
+                      onChange={(nextValue) =>
+                        setLineValues((current) => ({
+                          ...current,
+                          [category.id]: nextValue,
+                        }))
+                      }
+                    />
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {step === 2 && (
+        <section className="budget-detail-section glass-module">
+          <div className="budget-detail-section__heading">
+            <h2>Período</h2>
+            <p>Escolha o mês inicial e quantos meses o molde deve cobrir.</p>
+          </div>
+          <div className="budget-apply-form">
+            <div className="glass-field">
+              <label htmlFor="budget-start-period">Mês inicial</label>
+              <input
+                id="budget-start-period"
+                type="month"
+                value={startPeriod}
+                onChange={(event) => setStartPeriod(event.target.value)}
+                required
+              />
+            </div>
+            <div className="glass-field">
+              <label htmlFor="budget-month-count">Quantidade de meses</label>
+              <input
+                id="budget-month-count"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="36"
+                step="1"
+                value={months}
+                onChange={(event) => setMonths(event.target.value)}
+                required
+              />
+            </div>
+            <div className="budget-end-period" aria-live="polite">
+              <span>Mês final</span>
+              <strong>{endPeriod ? periodLabel(endPeriod) : '—'}</strong>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === 3 && (
+        <section className="budget-months-section">
+          <div className="budget-detail-section__heading">
+            <h2>Ajustes por mês</h2>
+            <p>Personalize um mês sem mudar o molde dos demais.</p>
+          </div>
+          <div className="budget-months">
+            {periods.map((period) => {
+              const key = periodKey(period);
+              const drafts = monthValues[key] ?? lineValues;
+              return (
+                <details key={key} className="budget-month glass-module">
+                  <summary>{periodLabel(period)}</summary>
+                  <div className="budget-month__limits">
+                    {expenseChildren
+                      .filter((category) => (lineValues[category.id] ?? 0) > 0)
+                      .map((category) => (
+                        <div key={category.id} className="budget-month__limit">
+                          <label htmlFor={`${key}-${category.id}`}>{category.name}</label>
+                          <div className="budget-money-field">
+                            <span aria-hidden="true">R$</span>
+                            <MoneyInput
+                              id={`${key}-${category.id}`}
+                              value={drafts[category.id] ?? 0}
+                              onChange={(nextValue) => {
+                                touchedMonthsRef.current.add(key);
+                                setMonthValues((current) => ({
+                                  ...current,
+                                  [key]: {
+                                    ...(current[key] ?? lineValues),
+                                    [category.id]: nextValue,
+                                  },
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {savePlan.error && (
         <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
           Erro: {(savePlan.error as Error).message}
         </p>
       )}
-      {removeTemplate.error && (
-        <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
-          Erro: {(removeTemplate.error as Error).message}
-        </p>
-      )}
 
-      <section className="budget-detail-section glass-module">
-        <div className="budget-detail-section__heading">
-          <div>
-            <h2>Limites do molde</h2>
-            <p>Valores vazios não serão replicados.</p>
-          </div>
-        </div>
-
-        {expenseChildren.length === 0 ? (
-          <p className="budget-detail-empty">
-            Cadastre subcategorias de saída antes de montar o planejamento.
-          </p>
-        ) : (
-          <div className="budget-lines">
-            {expenseChildren.map((category) => (
-              <label key={category.id} className="budget-line" htmlFor={`line-${category.id}`}>
-                <span>
-                  <strong>{category.name}</strong>
-                  <small>{category.parentName}</small>
-                </span>
-                <span className="budget-money-field">
-                  <span aria-hidden="true">R$</span>
-                  <MoneyInput
-                    id={`line-${category.id}`}
-                    value={lineValues[category.id] ?? 0}
-                    onChange={(nextValue) =>
-                      setLineValues((current) => ({
-                        ...current,
-                        [category.id]: nextValue,
-                      }))
-                    }
-                  />
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="budget-detail-section glass-module">
-        <div className="budget-detail-section__heading">
-          <div>
-            <h2>Gerar meses</h2>
-            <p>Repita os limites do molde a partir do mês escolhido.</p>
-          </div>
-        </div>
-
-        <form className="budget-apply-form" onSubmit={handleApply}>
-          <div className="glass-field">
-            <label htmlFor="budget-start-period">Mês inicial</label>
-            <input
-              id="budget-start-period"
-              type="month"
-              value={startPeriod}
-              onChange={(event) => setStartPeriod(event.target.value)}
-              required
-            />
-          </div>
-          <div className="glass-field">
-            <label htmlFor="budget-month-count">Quantidade de meses</label>
-            <input
-              id="budget-month-count"
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max="36"
-              step="1"
-              value={months}
-              onChange={(event) => setMonths(event.target.value)}
-              required
-            />
-          </div>
-          <label className="budget-overwrite">
-            <input
-              type="checkbox"
-              checked={overwrite}
-              onChange={(event) => setOverwrite(event.target.checked)}
-            />
-            <span>
-              <strong>Substituir existentes</strong>
-              <small>Atualiza limites já criados nesses meses.</small>
-            </span>
-          </label>
+      <nav className="wizard-nav" aria-label="Navegação das etapas">
+        {step > 1 && (
           <button
-            className="btn-submit"
-            type="submit"
-            disabled={
-              applyTemplate.isPending || savePlan.isPending || !startPeriod || !validMonths
-            }
+            type="button"
+            className="wizard-nav__back"
+            onClick={goBack}
+            disabled={savePlan.isPending}
           >
-            {applyTemplate.isPending ? 'Salvando e gerando...' : 'Gerar meses'}
+            Voltar à etapa anterior
           </button>
-        </form>
-
-        {applyFeedback && (
-          <p className="budget-detail-feedback" role="status">
-            {applyFeedback.created} {applyFeedback.created === 1 ? 'limite criado' : 'limites criados'}
-            {applyFeedback.skipped > 0
-              ? ` · ${applyFeedback.skipped} ${applyFeedback.skipped === 1 ? 'existente mantido' : 'existentes mantidos'}`
-              : ''}
-          </p>
         )}
-        {applyTemplate.error && (
-          <p className="budget-detail-feedback budget-detail-feedback--error" role="alert">
-            Erro: {(applyTemplate.error as Error).message}
-          </p>
-        )}
-      </section>
-
-      <section className="budget-months-section">
-        <div className="budget-detail-section__heading">
-          <div>
-            <h2>Meses gerados</h2>
-            <p>Abra um mês para ajustar aquele período. As alterações entram no Salvar planejamento.</p>
-          </div>
-        </div>
-
-        {generatedPeriods.length === 0 ? (
-          <div className="empty-state budget-detail-empty">
-            Nenhum mês gerado por este planejamento.
-          </div>
+        {step < 3 ? (
+          <button
+            type="button"
+            className="btn-submit"
+            onClick={goNext}
+            disabled={!canGoNext}
+          >
+            Próxima etapa
+          </button>
         ) : (
-          <div className="budget-months">
-            {generatedPeriods.map((period) => (
-              <details key={periodKey(period)} className="budget-month glass-module">
-                <summary>{periodLabel(period)}</summary>
-                <MonthBudgetEditor
-                  period={period}
-                  drafts={monthDrafts}
-                  onDraftChange={(budgetId, amount) =>
-                    setMonthDrafts((current) => ({ ...current, [budgetId]: amount }))
-                  }
-                />
-              </details>
-            ))}
-          </div>
+          <button
+            type="button"
+            className="btn-submit"
+            onClick={() => {
+              if (!start || !validMonths) return;
+              savePlan.mutate({
+                lines: templateLines,
+                startYear: start.year,
+                startMonth: start.month,
+                monthCount,
+                periods,
+                drafts: monthValues,
+              });
+            }}
+            disabled={savePlan.isPending || !hasPositiveLimits || !validMonths}
+          >
+            {savePlan.isPending ? 'Salvando...' : 'Salvar planejamento'}
+          </button>
         )}
-      </section>
+      </nav>
     </div>
   );
 }

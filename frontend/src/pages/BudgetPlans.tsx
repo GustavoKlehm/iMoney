@@ -122,39 +122,29 @@ export function BudgetPlansPage() {
             const activeLines = template.lines.filter((line) => Number(line.amount) > 0).length;
             return (
               <article key={template.id} className="budget-plan-card glass-module">
-                <div className="budget-plan-card__toolbar">
-                  <ItemActions
-                    name={template.name}
-                    actions={[
-                      {
-                        id: 'edit',
-                        label: 'Editar',
-                        onSelect: () => navigate(`/planejamentos/${template.id}`),
-                      },
-                      {
-                        id: 'remove',
-                        label: 'Excluir',
-                        danger: true,
-                        disabled: removeTemplate.isPending,
-                        onSelect: () => {
-                          void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
-                            if (ok) removeTemplate.mutate(template.id);
-                          });
-                        },
-                      },
-                    ]}
-                  />
-                </div>
-                <Link
-                  to={`/planejamentos/${template.id}`}
-                  className="budget-plan-card__hit"
-                >
-                  <span className="budget-plan-card__name">{template.name}</span>
-                  <span className="budget-plan-card__summary">
-                    {activeLines} {activeLines === 1 ? 'limite' : 'limites'} · {formatCurrency(total)}
+                <Link to={`/planejamentos/${template.id}`} className="budget-plan-card__details">
+                  <h2>{template.name}</h2>
+                  <span>
+                    {activeLines} {activeLines === 1 ? 'limite' : 'limites'}
+                    {activeLines > 0 ? ` · ${formatCurrency(total)}` : ''}
                   </span>
-                  <span className="budget-plan-card__action">Abrir planejamento</span>
                 </Link>
+                <ItemActions
+                  name={template.name}
+                  actions={[
+                    {
+                      id: 'remove',
+                      label: 'Excluir',
+                      danger: true,
+                      disabled: removeTemplate.isPending,
+                      onSelect: () => {
+                        void confirm(removalCopy(template.name, Boolean(template.hasGeneratedMonths))).then((ok) => {
+                          if (ok) removeTemplate.mutate(template.id);
+                        });
+                      },
+                    },
+                  ]}
+                />
               </article>
             );
           })}
