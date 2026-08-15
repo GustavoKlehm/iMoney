@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom';
 import { AnimatedOutlet } from './AnimatedOutlet';
 import { AppLogo } from './AppLogo';
 import { BackLink } from './BackLink';
@@ -19,6 +20,7 @@ const navItems = [
 ];
 
 export function Layout() {
+  const { pathname } = useLocation();
   const { user, signOut } = useAuth();
 
   return (
@@ -47,7 +49,9 @@ export function Layout() {
 
       <main className="main">
         <ConfirmProvider>
-          <BackLink />
+          <BackLink
+            className={pathname === '/lancamentos' ? 'back-link--transactions-mobile' : undefined}
+          />
           <AnimatedOutlet />
         </ConfirmProvider>
       </main>
