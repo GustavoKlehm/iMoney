@@ -39,6 +39,23 @@
   line-height: 1.15;
 }
 
+.hero-balance--projected {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.hero-balance__value.negative {
+  color: var(--danger);
+}
+
+.hero-balance__hint {
+  max-width: 28rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 300;
+  line-height: 1.4;
+}
+
 /* ── Metas + Contas (prioridade, above the fold) ── */
 
 .priority-row {

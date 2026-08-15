@@ -159,6 +159,20 @@ export function DashboardPage() {
           </div>
         </section>
       )}
+
+      <section className="hero-balance hero-balance--projected glass-module" aria-label="Saldo projetado">
+        <span className="hero-balance__label">Saldo projetado</span>
+        <span className={`hero-balance__value${data.summary.projectedFreeBalance < 0 ? ' negative' : ''}`}>
+          {formatCurrency(data.summary.projectedFreeBalance)}
+        </span>
+        <p className="hero-balance__hint">
+          Livre {formatCurrency(data.summary.freeBalance)}
+          {' − '}
+          limites {formatCurrency(data.summary.plannedLimits)}
+          {' − '}
+          sem plano {formatCurrency(data.summary.unplannedExpenses)}
+        </p>
+      </section>
     </div>
   );
 }

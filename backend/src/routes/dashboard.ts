@@ -7,6 +7,11 @@ import { appNowParts, monthStart } from '../lib/appTime.js';
 import { monthRange } from '../lib/monthRange.js';
 import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
+import {
+  projectedFreeBalance,
+  sumPlannedLimits,
+  sumUnplannedExpenses,
+} from '../lib/projectedBalance.js';
 
 const router = Router();
 
@@ -132,6 +137,26 @@ router.get('/monthly', async (req, res, next) => {
       .reduce((sum, a) => sum + a.balance, 0);
 
     const totalBalance = accountBalances.reduce((sum, a) => sum + a.balance, 0);
+    const freeBalance = totalBalance - reservedTotal;
+    const plannedBudgets = budgets
+      .map((budget) => ({
+        categoryId: budget.categoryId,
+        limitAmount: Number(budget.limitAmount),
+      }))
+      .filter((budget) => budget.limitAmount > 0);
+    const plannedLimits = sumPlannedLimits(plannedBudgets);
+    const unplannedExpenses = sumUnplannedExpenses(
+      expensesByCategory.map((row) => ({
+        categoryId: row.categoryId,
+        spent: Number(row._sum.amount ?? 0),
+      })),
+      plannedBudgets.map((budget) => budget.categoryId),
+    );
+    const projectedBalance = projectedFreeBalance({
+      freeBalance,
+      plannedLimits,
+      unplannedExpenses,
+    });
     const balanceByAccount = new Map(
       accountBalances.map((account) => [account.id, account.balance]),
     );
@@ -177,7 +202,10 @@ router.get('/monthly', async (req, res, next) => {
         balance: income - expenses,
         totalBalance,
         reservedTotal,
-        freeBalance: totalBalance - reservedTotal,
+        freeBalance,
+        plannedLimits,
+        unplannedExpenses,
+        projectedFreeBalance: projectedBalance,
       },
       budgetProgress,
       accountBalances,

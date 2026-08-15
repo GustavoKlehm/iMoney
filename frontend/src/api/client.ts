@@ -316,6 +316,9 @@ export interface DashboardData {
     totalBalance: number;
     reservedTotal: number;
     freeBalance: number;
+    plannedLimits: number;
+    unplannedExpenses: number;
+    projectedFreeBalance: number;
   };
   budgetProgress: BudgetProgress[];
   accountBalances: Account[];
