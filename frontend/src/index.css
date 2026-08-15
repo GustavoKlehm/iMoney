@@ -92,7 +92,6 @@ body {
 .budget-item,
 .plan-card,
 .accounts-list,
-.transaction-row,
 .empty-state,
 .category-group,
 .tx-form,
@@ -114,7 +113,6 @@ body {
 .budget-item::before,
 .plan-card::before,
 .accounts-list::before,
-.transaction-row::before,
 .empty-state::before,
 .category-group::before,
 .tx-form::before,
@@ -150,7 +148,6 @@ body {
 .budget-item::after,
 .plan-card::after,
 .accounts-list::after,
-.transaction-row::after,
 .empty-state::after,
 .category-group::after,
 .tx-form::after,
@@ -173,7 +170,6 @@ body {
 .card > *,
 .budget-item > *,
 .plan-card > *,
-.transaction-row > *,
 .category-group > *,
 .tx-form > *,
 .page-loading > *,
@@ -197,14 +193,12 @@ body {
 }
 
 .card,
-.transaction-row,
 .btn-primary,
 .btn-submit {
   -webkit-tap-highlight-color: transparent;
 }
 
-.card:active,
-.transaction-row:active {
+.card:active {
   transform: scale(0.992);
   transition: transform 0.3s var(--ease-smooth);
 }
@@ -370,7 +364,6 @@ body {
   }
 
   .card:active,
-  .transaction-row:active,
   .btn-primary:active,
   .btn-submit:active:not(:disabled) {
     transform: none;
@@ -384,7 +377,6 @@ body {
   .budget-item,
   .plan-card,
   .accounts-list,
-  .transaction-row,
   .empty-state,
   .category-group,
   .tx-form,

@@ -37,7 +37,9 @@ export function TransactionsPage() {
   if (isLoading) return <PageLoading message="Carregando lançamentos..." />;
   if (error) return <div className="page-error">Erro: {(error as Error).message}</div>;
 
-  const transactions = data?.data ?? [];
+  const transactions = [...(data?.data ?? [])].sort(
+    (first, second) => new Date(second.date).getTime() - new Date(first.date).getTime(),
+  );
 
   return (
     <div className="transactions-page">
@@ -66,9 +68,9 @@ export function TransactionsPage() {
           </Link>
         </div>
       ) : (
-        <div className="transactions-list">
+        <ul className="transactions-list glass-module">
           {transactions.map((tx) => (
-            <article
+            <li
               key={tx.id}
               className={`transaction-row ${tx.type.toLowerCase()} ${tx.isCancelled ? 'cancelled' : ''}`}
             >
@@ -83,13 +85,13 @@ export function TransactionsPage() {
                     : tx.category?.name ?? TRANSACTION_TYPE_LABELS[tx.type]}
                 </span>
               </div>
-              <div className="tx-right">
-                <span className={`tx-amount ${tx.type.toLowerCase()}`}>
-                  {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '−' : ''}
-                  {formatCurrency(Number(tx.amount))}
-                </span>
-                <span className="tx-date">{formatDateTime(tx.date)}</span>
-              </div>
+              <span className={`tx-amount ${tx.type.toLowerCase()}`}>
+                {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '−' : ''}
+                {formatCurrency(Number(tx.amount))}
+              </span>
+              <time className="tx-date" dateTime={tx.date}>
+                {formatDateTime(tx.date)}
+              </time>
               <ItemActions
                 name={tx.description}
                 actions={[
@@ -113,9 +115,9 @@ export function TransactionsPage() {
                   },
                 ]}
               />
-            </article>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
