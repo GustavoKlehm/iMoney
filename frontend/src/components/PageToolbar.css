@@ -11,8 +11,8 @@
 }
 
 .page-toolbar__icon-spacer {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
 }
 
@@ -20,8 +20,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border-radius: 50%;
   background: rgba(26, 11, 46, 0.64);
@@ -73,7 +73,7 @@
 
   .page-toolbar__compact {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.35rem;

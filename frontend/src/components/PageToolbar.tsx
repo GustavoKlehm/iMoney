@@ -22,7 +22,7 @@ export type PageToolbarProps = {
 
 function ChevronIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
       <path
         d="M10.25 3.5 5.75 8l4.5 4.5"
         fill="none"
@@ -37,7 +37,7 @@ function ChevronIcon() {
 
 function PlusIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+    <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
       <path
         d="M9 4.5v9M4.5 9h9"
         fill="none"
