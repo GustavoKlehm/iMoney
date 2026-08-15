@@ -129,7 +129,9 @@ export function DashboardPage() {
               >
                 <div className="budget-header">
                   <div className="budget-title">
-                    <span className="budget-name">{item.category.name}</span>
+                    <span className="budget-name" title={item.category.name}>
+                      {item.category.name}
+                    </span>
                     {item.paceStatus && (
                       <span className={`pace-badge pace-badge--header pace-badge--${item.paceStatus}`}>
                         {PACE_STATUS_LABELS[item.paceStatus]}

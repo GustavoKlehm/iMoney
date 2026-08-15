@@ -342,13 +342,16 @@
   .budget-title {
     flex: none;
     width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .budget-name {
-    flex: 1;
-    white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     line-height: 1.3;
   }
 
@@ -360,6 +363,7 @@
   .pace-badge--header {
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
   }
 
   .pace-badge--footer {
