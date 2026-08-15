@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api, type Transaction } from '../api/client';
 import { AppLogo } from '../components/AppLogo';
 import { ItemActions, type ItemActionsHandle } from '../components/ItemActions';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { transactionRemovalCopy } from '../utils/confirmRemoval';
@@ -145,56 +146,12 @@ export function TransactionsPage() {
 
   return (
     <div className="transactions-page">
-      <header className="transactions-page-header">
-        <div className="transactions-mobile-toolbar" aria-label="Lançamentos">
-          <Link
-            to="/"
-            className="transactions-mobile-toolbar__btn liquid-glass"
-            aria-label="Voltar"
-          >
-            <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <path
-                d="M10.25 3.5 5.75 8l4.5 4.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </Link>
-          <h1 className="transactions-mobile-toolbar__title">Lançamentos</h1>
-          <Link
-            to="/lancamentos/novo"
-            className="transactions-mobile-toolbar__btn liquid-glass"
-            aria-label="Adicionar lançamento"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
-              <path
-                d="M9 4.5v9M4.5 9h9"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-              />
-            </svg>
-          </Link>
-        </div>
-
-        <div className="transactions-desktop-header page-header">
-          <div>
-            <h1>Lançamentos</h1>
-            <p className="subtitle">{transactions.length} registros neste mês</p>
-          </div>
-          <Link to="/lancamentos/novo" className="btn-primary">
-            Adicionar lançamento
-          </Link>
-        </div>
-
-        <p className="transactions-mobile-subtitle subtitle">
-          {transactions.length} registros neste mês
-        </p>
-      </header>
+      <PageToolbar
+        title="Lançamentos"
+        subtitle={`${transactions.length} registros neste mês`}
+        backTo="/"
+        action={{ to: '/lancamentos/novo', label: 'Adicionar lançamento' }}
+      />
 
       {removeTransaction.error && (
         <div className="page-error" role="alert">
