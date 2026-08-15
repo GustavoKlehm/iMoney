@@ -44,7 +44,7 @@
 }
 
 @media (max-width: 767px) {
-  .back-link--transactions-mobile {
+  .back-link--page-toolbar {
     display: none;
   }
 }

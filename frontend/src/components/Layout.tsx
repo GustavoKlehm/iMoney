@@ -4,6 +4,7 @@ import { AppLogo } from './AppLogo';
 import { BackLink } from './BackLink';
 import { ConfirmProvider } from './ConfirmProvider';
 import { GlassNav } from './GlassNav';
+import { usesPageToolbar } from './PageToolbar';
 import { UserMenu } from './UserMenu';
 import { WallpaperBackground } from './WallpaperBackground';
 import { useAuth } from '../auth/AuthProvider';
@@ -50,7 +51,7 @@ export function Layout() {
       <main className="main">
         <ConfirmProvider>
           <BackLink
-            className={pathname === '/lancamentos' ? 'back-link--transactions-mobile' : undefined}
+            className={usesPageToolbar(pathname) ? 'back-link--page-toolbar' : undefined}
           />
           <AnimatedOutlet />
         </ConfirmProvider>
