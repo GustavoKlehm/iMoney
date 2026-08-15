@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, type Goal } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
 import { MoneyInput } from '../components/MoneyInput';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { Select } from '../components/Select';
 import { useConfirm } from '../components/ConfirmProvider';
@@ -127,38 +128,37 @@ export function GoalDetailPage() {
 
   return (
     <div className="goal-detail-page">
-      <header className="page-header goal-detail-header">
-        <div>
-          <div className="goal-detail-title">
-            <h1>{goal.name}</h1>
-            {goal.status === 'ACHIEVED' && (
-              <span className="goal-badge goal-badge--achieved">Atingido</span>
-            )}
-          </div>
-          <p className="subtitle">Cofrinho {goal.account.name}</p>
-        </div>
-        <div className="goal-detail-header__actions">
-          <button type="button" className="goal-secondary-button" onClick={() => openEditor('edit')}>
-            Editar objetivo
-          </button>
-          <ItemActions
-            name={goal.name}
-            actions={[
-              {
-                id: 'remove',
-                label: 'Excluir',
-                danger: true,
-                disabled: removeGoal.isPending,
-                onSelect: () => {
-                  void confirm(removalCopy(goal.name, false)).then((ok) => {
-                    if (ok) removeGoal.mutate();
-                  });
+      <PageToolbar
+        title={goal.name}
+        subtitle={`Cofrinho ${goal.account.name}`}
+        backTo="/objetivos"
+        titleAddon={goal.status === 'ACHIEVED' ? (
+          <span className="goal-badge goal-badge--achieved">Atingido</span>
+        ) : undefined}
+        desktopExtra={(
+          <>
+            <button type="button" className="goal-secondary-button" onClick={() => openEditor('edit')}>
+              Editar objetivo
+            </button>
+            <ItemActions
+              name={goal.name}
+              actions={[
+                {
+                  id: 'remove',
+                  label: 'Excluir',
+                  danger: true,
+                  disabled: removeGoal.isPending,
+                  onSelect: () => {
+                    void confirm(removalCopy(goal.name, false)).then((ok) => {
+                      if (ok) removeGoal.mutate();
+                    });
+                  },
                 },
-              },
-            ]}
-          />
-        </div>
-      </header>
+              ]}
+            />
+          </>
+        )}
+      />
       {removeGoal.error && (
         <p className="goal-detail-feedback goal-detail-feedback--error" role="alert">
           Erro: {(removeGoal.error as Error).message}

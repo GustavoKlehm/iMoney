@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type Account, type CreateAccount } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
 import { MoneyInput } from '../components/MoneyInput';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
@@ -130,21 +131,17 @@ export function AccountsPage() {
 
   return (
     <div className="accounts-page">
-      <header className="page-header accounts-header">
-        <div>
-          <h1>Contas e cofrinhos</h1>
-          <p className="subtitle">Separe o dinheiro disponível dos valores reservados</p>
-        </div>
-        <button
-          type="button"
-          className="btn-primary accounts-header__action"
-          aria-expanded={showForm}
-          aria-controls="account-form"
-          onClick={openCreate}
-        >
-          {showForm && !editingId ? 'Fechar formulário' : 'Nova conta ou cofrinho'}
-        </button>
-      </header>
+      <PageToolbar
+        title="Contas e cofrinhos"
+        subtitle="Separe o dinheiro disponível dos valores reservados"
+        backTo="/cadastros"
+        action={{
+          label: showForm && !editingId ? 'Fechar formulário' : 'Nova conta ou cofrinho',
+          onClick: openCreate,
+          expanded: showForm,
+          controls: 'account-form',
+        }}
+      />
 
       {showForm && (
         <form

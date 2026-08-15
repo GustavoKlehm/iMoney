@@ -7,6 +7,7 @@ import {
   type TransactionType,
 } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { Select } from '../components/Select';
 import { useConfirm } from '../components/ConfirmProvider';
@@ -348,21 +349,17 @@ export function CategoriesPage() {
 
   return (
     <div className="categories-page">
-      <header className="page-header categories-header">
-        <div>
-          <h1>Categorias</h1>
-          <p className="subtitle">Organize entradas e saídas por grupo</p>
-        </div>
-        <button
-          type="button"
-          className="btn-primary categories-header__action"
-          aria-expanded={showForm}
-          aria-controls="category-form"
-          onClick={openCreate}
-        >
-          {showForm ? 'Fechar formulário' : 'Nova categoria'}
-        </button>
-      </header>
+      <PageToolbar
+        title="Categorias"
+        subtitle="Organize entradas e saídas por grupo"
+        backTo="/cadastros"
+        action={{
+          label: showForm ? 'Fechar formulário' : 'Nova categoria',
+          onClick: openCreate,
+          expanded: showForm,
+          controls: 'category-form',
+        }}
+      />
 
       {showForm && (
       <form id="category-form" className="category-form glass-module" onSubmit={handleSubmit}>
