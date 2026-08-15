@@ -128,7 +128,14 @@ export function DashboardPage() {
                 className={`budget-item${item.paceStatus ? ` budget-item--${item.paceStatus}` : ''}`}
               >
                 <div className="budget-header">
-                  <span className="budget-name">{item.category.name}</span>
+                  <div className="budget-title">
+                    <span className="budget-name">{item.category.name}</span>
+                    {item.paceStatus && (
+                      <span className={`pace-badge pace-badge--header pace-badge--${item.paceStatus}`}>
+                        {PACE_STATUS_LABELS[item.paceStatus]}
+                      </span>
+                    )}
+                  </div>
                   <span className="budget-amounts">
                     {formatCurrency(item.spent)} / {formatCurrency(item.limit)}
                   </span>
@@ -143,7 +150,7 @@ export function DashboardPage() {
                   <span>{item.percent}%</span>
                   <span>Restam {formatCurrency(item.remaining)}</span>
                   {item.paceStatus && (
-                    <span className={`pace-badge pace-badge--${item.paceStatus}`}>
+                    <span className={`pace-badge pace-badge--footer pace-badge--${item.paceStatus}`}>
                       {PACE_STATUS_LABELS[item.paceStatus]}
                     </span>
                   )}
