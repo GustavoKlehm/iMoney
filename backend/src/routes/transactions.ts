@@ -11,7 +11,7 @@ const listQuerySchema = z.object({
   year: z.coerce.number().int().optional(),
   month: z.coerce.number().int().min(1).max(12).optional(),
   type: z.nativeEnum(TransactionType).optional(),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.string().min(1).optional(),
   accountId: z.string().uuid().optional(),
   includeCancelled: z.coerce.boolean().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),

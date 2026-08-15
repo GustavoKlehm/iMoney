@@ -26,6 +26,15 @@ describe('createTransactionSchema', () => {
     assert.equal(createTransactionSchema.safeParse(transaction(TransactionType.EXPENSE)).success, false);
   });
 
+  it('aceita categoria com id de seed, que não é UUID', () => {
+    const result = createTransactionSchema.safeParse({
+      ...transaction(TransactionType.EXPENSE),
+      accountId,
+      categoryId: 'cat-mercado',
+    });
+    assert.equal(result.success, true);
+  });
+
   it('aceita entrada e saída com conta de origem', () => {
     assert.equal(
       createTransactionSchema.safeParse({ ...transaction(TransactionType.INCOME), accountId }).success,

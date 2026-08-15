@@ -6,7 +6,7 @@ export const baseTransactionSchema = z.object({
   amount: z.number().positive(),
   type: z.nativeEnum(TransactionType),
   description: z.string().min(1).max(500),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.string().min(1).optional(),
   accountId: z.string().uuid().optional(),
   toAccountId: z.string().uuid().optional(),
   responsible: z.nativeEnum(Responsible).optional(),

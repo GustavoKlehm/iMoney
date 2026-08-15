@@ -34,7 +34,7 @@ const router = Router();
 const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
   type: z.nativeEnum(TransactionType),
-  parentId: z.string().uuid().optional(),
+  parentId: z.string().min(1).optional(),
   icon: z.string().optional(),
   color: z.string().optional(),
   sortOrder: z.number().int().optional(),
