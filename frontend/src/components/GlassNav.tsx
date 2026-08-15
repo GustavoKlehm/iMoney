@@ -17,9 +17,10 @@ type ThumbRect = {
 type GlassNavProps = {
   items: GlassNavItem[];
   'aria-label'?: string;
+  className?: string;
 };
 
-export function GlassNav({ items, 'aria-label': ariaLabel }: GlassNavProps) {
+export function GlassNav({ items, 'aria-label': ariaLabel, className }: GlassNavProps) {
   const navRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const [thumb, setThumb] = useState<ThumbRect>({ left: 0, width: 0 });
@@ -58,7 +59,7 @@ export function GlassNav({ items, 'aria-label': ariaLabel }: GlassNavProps) {
   }, [updateThumb]);
 
   return (
-    <nav ref={navRef} className="glass-nav" aria-label={ariaLabel}>
+    <nav ref={navRef} className={className ? `glass-nav ${className}` : 'glass-nav'} aria-label={ariaLabel}>
       <div
         className={`glass-nav-thumb${ready ? ' glass-nav-thumb--ready' : ''}`}
         aria-hidden="true"
