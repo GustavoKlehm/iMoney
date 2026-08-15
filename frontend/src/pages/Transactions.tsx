@@ -85,13 +85,15 @@ export function TransactionsPage() {
                     : tx.category?.name ?? TRANSACTION_TYPE_LABELS[tx.type]}
                 </span>
               </div>
-              <span className={`tx-amount ${tx.type.toLowerCase()}`}>
-                {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '−' : ''}
-                {formatCurrency(Number(tx.amount))}
-              </span>
-              <time className="tx-date" dateTime={tx.date}>
-                {formatDateTime(tx.date)}
-              </time>
+              <div className="tx-values">
+                <span className={`tx-amount ${tx.type.toLowerCase()}`}>
+                  {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '−' : ''}
+                  {formatCurrency(Number(tx.amount))}
+                </span>
+                <time className="tx-date" dateTime={tx.date}>
+                  {formatDateTime(tx.date)}
+                </time>
+              </div>
               <ItemActions
                 name={tx.description}
                 actions={[
