@@ -3,6 +3,7 @@ import { AppLogo } from './AppLogo';
 import { BackLink } from './BackLink';
 import { ConfirmProvider } from './ConfirmProvider';
 import { GlassNav } from './GlassNav';
+import { UserMenu } from './UserMenu';
 import { WallpaperBackground } from './WallpaperBackground';
 import { useAuth } from '../auth/AuthProvider';
 import './Layout.css';
@@ -32,20 +33,15 @@ export function Layout() {
             <span className="tagline">Controle financeiro do casal</span>
           </div>
         </div>
-        <div className="header-actions">
-          <GlassNav items={navItems} aria-label="Navegação principal" />
-          <div className="header-session">
-            <span className="header-session__email">{user?.email}</span>
-            <button
-              className="header-session__sign-out"
-              type="button"
-              onClick={() => {
-                void signOut().catch(() => undefined);
-              }}
-            >
-              Sair
-            </button>
-          </div>
+
+        <div className="header-controls">
+          <GlassNav items={navItems} aria-label="Navegação principal" className="header-nav" />
+          <UserMenu
+            user={user}
+            onSignOut={() => {
+              void signOut().catch(() => undefined);
+            }}
+          />
         </div>
       </header>
 
