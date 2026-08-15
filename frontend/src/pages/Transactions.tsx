@@ -1,8 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, type Transaction } from '../api/client';
 import { AppLogo } from '../components/AppLogo';
-import { ItemActions } from '../components/ItemActions';
+import { ItemActions, type ItemActionsHandle } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { transactionRemovalCopy } from '../utils/confirmRemoval';
@@ -14,10 +15,111 @@ import {
 } from '../utils/format';
 import './Transactions.css';
 
+const COMPACT_QUERY = '(max-width: 767px)';
+
+function useCompactLayout() {
+  const [compact, setCompact] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(COMPACT_QUERY).matches : false,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(COMPACT_QUERY);
+    const sync = () => setCompact(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  return compact;
+}
+
+interface TransactionRowProps {
+  tx: Transaction;
+  compact: boolean;
+  removing: boolean;
+  onEdit: (id: string) => void;
+  onRemove: (tx: Transaction) => void;
+}
+
+function TransactionRow({ tx, compact, removing, onEdit, onRemove }: TransactionRowProps) {
+  const rowRef = useRef<HTMLLIElement>(null);
+  const actionsRef = useRef<ItemActionsHandle>(null);
+
+  function openActions() {
+    actionsRef.current?.toggle();
+  }
+
+  return (
+    <li
+      ref={rowRef}
+      className={`transaction-row ${tx.type.toLowerCase()} ${tx.isCancelled ? 'cancelled' : ''} ${compact ? 'transaction-row--compact' : ''}`}
+      onClick={compact ? openActions : undefined}
+      onKeyDown={
+        compact
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openActions();
+              }
+            }
+          : undefined
+      }
+      role={compact ? 'button' : undefined}
+      tabIndex={compact ? 0 : undefined}
+      aria-haspopup={compact ? 'menu' : undefined}
+      aria-label={compact ? `Ações de ${tx.description}` : undefined}
+    >
+      <div className="tx-main">
+        <span className="tx-desc">
+          {tx.description}
+          {tx.isOpeningBalance && <span className="tx-badge">Saldo inicial</span>}
+        </span>
+        <span className="tx-meta">
+          {tx.type === 'TRANSFER'
+            ? `${tx.account?.name ?? 'Conta de origem'} → ${tx.toAccount?.name ?? 'Conta de destino'}`
+            : tx.category?.name ?? TRANSACTION_TYPE_LABELS[tx.type]}
+        </span>
+      </div>
+      <div className="tx-values">
+        <span className={`tx-amount ${tx.type.toLowerCase()}`}>
+          {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '−' : ''}
+          {formatCurrency(Number(tx.amount))}
+        </span>
+        <time className="tx-date" dateTime={tx.date}>
+          {formatDateTime(tx.date)}
+        </time>
+      </div>
+      <ItemActions
+        ref={actionsRef}
+        name={tx.description}
+        hideTrigger={compact}
+        anchorRef={rowRef}
+        actions={[
+          ...(!tx.isCancelled
+            ? [{
+                id: 'edit',
+                label: 'Editar',
+                onSelect: () => onEdit(tx.id),
+              }]
+            : []),
+          {
+            id: 'remove',
+            label: 'Excluir',
+            danger: true,
+            disabled: removing,
+            onSelect: () => onRemove(tx),
+          },
+        ]}
+      />
+    </li>
+  );
+}
+
 export function TransactionsPage() {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const compact = useCompactLayout();
   const { year, month } = getCurrentPeriod();
 
   const { data, isLoading, error } = useQuery({
@@ -70,56 +172,21 @@ export function TransactionsPage() {
       ) : (
         <ul className="transactions-list glass-module">
           {transactions.map((tx) => (
-            <li
+            <TransactionRow
               key={tx.id}
-              className={`transaction-row ${tx.type.toLowerCase()} ${tx.isCancelled ? 'cancelled' : ''}`}
-            >
-              <div className="tx-main">
-                <span className="tx-desc">
-                  {tx.description}
-                  {tx.isOpeningBalance && <span className="tx-badge">Saldo inicial</span>}
-                </span>
-                <span className="tx-meta">
-                  {tx.type === 'TRANSFER'
-                    ? `${tx.account?.name ?? 'Conta de origem'} → ${tx.toAccount?.name ?? 'Conta de destino'}`
-                    : tx.category?.name ?? TRANSACTION_TYPE_LABELS[tx.type]}
-                </span>
-              </div>
-              <span className={`tx-amount ${tx.type.toLowerCase()}`}>
-                {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '−' : ''}
-                {formatCurrency(Number(tx.amount))}
-              </span>
-              <time className="tx-date" dateTime={tx.date}>
-                {formatDateTime(tx.date)}
-              </time>
-              <ItemActions
-                name={tx.description}
-                actions={[
-                  ...(!tx.isCancelled
-                    ? [{
-                        id: 'edit',
-                        label: 'Editar',
-                        onSelect: () => navigate(`/lancamentos/novo?id=${encodeURIComponent(tx.id)}`),
-                      }]
-                    : []),
-                  {
-                    id: 'remove',
-                    label: 'Excluir',
-                    danger: true,
-                    disabled: removeTransaction.isPending,
-                    onSelect: () => {
-                      void confirm(transactionRemovalCopy(tx.description)).then((ok) => {
-                        if (ok) removeTransaction.mutate(tx.id);
-                      });
-                    },
-                  },
-                ]}
-              />
-            </li>
+              tx={tx}
+              compact={compact}
+              removing={removeTransaction.isPending}
+              onEdit={(id) => navigate(`/lancamentos/novo?id=${encodeURIComponent(id)}`)}
+              onRemove={(item) => {
+                void confirm(transactionRemovalCopy(item.description)).then((ok) => {
+                  if (ok) removeTransaction.mutate(item.id);
+                });
+              }}
+            />
           ))}
         </ul>
       )}
     </div>
   );
 }
-
