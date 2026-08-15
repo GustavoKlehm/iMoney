@@ -1,23 +1,42 @@
+import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import './PageToolbar.css';
 
-const ROUTES_WITH_PAGE_TOOLBAR = new Set(['/lancamentos']);
+const PAGE_TOOLBAR_EXACT = new Set([
+  '/lancamentos',
+  '/cadastros',
+  '/contas',
+  '/categorias',
+  '/planejamentos',
+  '/objetivos',
+]);
+
+const PAGE_TOOLBAR_PREFIXES = [
+  '/planejamentos/',
+  '/objetivos/',
+];
 
 export function usesPageToolbar(pathname: string): boolean {
-  return ROUTES_WITH_PAGE_TOOLBAR.has(pathname);
+  if (PAGE_TOOLBAR_EXACT.has(pathname)) return true;
+  return PAGE_TOOLBAR_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
 export type PageToolbarAction = {
-  to: string;
   label: string;
+  to?: string;
+  onClick?: () => void;
+  expanded?: boolean;
+  controls?: string;
 };
 
 export type PageToolbarProps = {
   title: string;
   subtitle?: string;
+  titleAddon?: ReactNode;
   backTo: string;
   backLabel?: string;
   action?: PageToolbarAction;
+  desktopExtra?: ReactNode;
 };
 
 function ChevronIcon() {
@@ -49,12 +68,48 @@ function PlusIcon() {
   );
 }
 
+function ActionControl({
+  action,
+  className,
+  iconOnly,
+}: {
+  action: PageToolbarAction;
+  className: string;
+  iconOnly: boolean;
+}) {
+  const content = iconOnly ? <PlusIcon /> : action.label;
+  const ariaLabel = iconOnly ? action.label : undefined;
+
+  if (action.to) {
+    return (
+      <Link to={action.to} className={className} aria-label={ariaLabel}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={action.onClick}
+      aria-label={ariaLabel}
+      aria-expanded={action.expanded}
+      aria-controls={action.controls}
+    >
+      {content}
+    </button>
+  );
+}
+
 export function PageToolbar({
   title,
   subtitle,
+  titleAddon,
   backTo,
   backLabel = 'Voltar',
   action,
+  desktopExtra,
 }: PageToolbarProps) {
   return (
     <header className="page-toolbar">
@@ -68,13 +123,11 @@ export function PageToolbar({
         </Link>
         <h1 className="page-toolbar__title">{title}</h1>
         {action ? (
-          <Link
-            to={action.to}
+          <ActionControl
+            action={action}
             className="page-toolbar__icon-btn liquid-glass"
-            aria-label={action.label}
-          >
-            <PlusIcon />
-          </Link>
+            iconOnly
+          />
         ) : (
           <span className="page-toolbar__icon-spacer" aria-hidden="true" />
         )}
@@ -82,13 +135,19 @@ export function PageToolbar({
 
       <div className="page-toolbar__desktop page-header">
         <div>
-          <h1>{title}</h1>
+          <h1>
+            {title}
+            {titleAddon}
+          </h1>
           {subtitle && <p className="subtitle">{subtitle}</p>}
         </div>
-        {action && (
-          <Link to={action.to} className="btn-primary">
-            {action.label}
-          </Link>
+        {(desktopExtra || action) && (
+          <div className="page-toolbar__desktop-actions">
+            {desktopExtra}
+            {action && (
+              <ActionControl action={action} className="btn-primary" iconOnly={false} />
+            )}
+          </div>
         )}
       </div>
 

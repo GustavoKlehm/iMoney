@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type BudgetPeriod } from '../api/client';
 import { MoneyInput } from '../components/MoneyInput';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { getCurrentPeriod, MONTH_NAMES } from '../utils/format';
 import { compareByName } from '../utils/sortByName';
@@ -225,14 +226,11 @@ export function BudgetPlanDetailPage() {
 
   return (
     <div className="budget-plan-detail-page">
-      <header className="page-header budget-plan-detail-header">
-        <div>
-          <h1>{template.name}</h1>
-          <p className="subtitle">
-            Etapa {step} de {STEPS.length} · {currentStep.title}
-          </p>
-        </div>
-      </header>
+      <PageToolbar
+        title={template.name}
+        subtitle={`Etapa ${step} de ${STEPS.length} · ${currentStep.title}`}
+        backTo="/planejamentos"
+      />
 
       <ol className="wizard-steps" aria-label="Etapas do planejamento">
         {STEPS.map((item) => (

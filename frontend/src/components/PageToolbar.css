@@ -66,6 +66,13 @@
   flex-shrink: 0;
 }
 
+.page-toolbar__desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 @media (max-width: 767px) {
   .page-toolbar {
     margin-bottom: 1rem;

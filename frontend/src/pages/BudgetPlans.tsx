@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, type CreateBudgetTemplate } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
@@ -55,21 +56,17 @@ export function BudgetPlansPage() {
 
   return (
     <div className="budget-plans-page">
-      <header className="page-header budget-plans-header">
-        <div>
-          <h1>Planejamentos</h1>
-          <p className="subtitle">Crie moldes e replique seus limites nos próximos meses</p>
-        </div>
-        <button
-          type="button"
-          className="btn-primary budget-plans-header__action"
-          aria-expanded={showForm}
-          aria-controls="new-budget-plan"
-          onClick={() => setShowForm((current) => !current)}
-        >
-          {showForm ? 'Fechar formulário' : 'Novo planejamento'}
-        </button>
-      </header>
+      <PageToolbar
+        title="Planejamentos"
+        subtitle="Crie moldes e replique seus limites nos próximos meses"
+        backTo="/cadastros"
+        action={{
+          label: showForm ? 'Fechar formulário' : 'Novo planejamento',
+          onClick: () => setShowForm((current) => !current),
+          expanded: showForm,
+          controls: 'new-budget-plan',
+        }}
+      />
 
       {showForm && (
         <form

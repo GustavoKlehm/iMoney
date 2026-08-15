@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PageToolbar } from '../components/PageToolbar';
 import './Cadastros.css';
 
 const registrationLinks = [
@@ -27,10 +28,11 @@ const registrationLinks = [
 export function CadastrosPage() {
   return (
     <div className="registrations-page">
-      <header className="page-header">
-        <h1>Cadastros</h1>
-        <p className="subtitle">Configure a estrutura da vida financeira do casal</p>
-      </header>
+      <PageToolbar
+        title="Cadastros"
+        subtitle="Configure a estrutura da vida financeira do casal"
+        backTo="/"
+      />
 
       <nav className="registrations-list" aria-label="Opções de cadastros">
         {registrationLinks.map((item) => (

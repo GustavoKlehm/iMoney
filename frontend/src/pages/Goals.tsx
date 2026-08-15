@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
 import { MoneyInput } from '../components/MoneyInput';
+import { PageToolbar } from '../components/PageToolbar';
 import { PageLoading } from '../components/PageLoading';
 import { Select } from '../components/Select';
 import { useConfirm } from '../components/ConfirmProvider';
@@ -113,21 +114,17 @@ export function GoalsPage() {
 
   return (
     <div className="goals-page">
-      <header className="page-header goals-header">
-        <div>
-          <h1>Objetivos</h1>
-          <p className="subtitle">Transforme seus cofrinhos em planos de longo prazo</p>
-        </div>
-        <button
-          type="button"
-          className="btn-primary goals-header__action"
-          aria-expanded={showForm}
-          aria-controls="new-goal"
-          onClick={() => setShowForm((current) => !current)}
-        >
-          {showForm ? 'Fechar formulário' : 'Novo objetivo'}
-        </button>
-      </header>
+      <PageToolbar
+        title="Objetivos"
+        subtitle="Transforme seus cofrinhos em planos de longo prazo"
+        backTo="/cadastros"
+        action={{
+          label: showForm ? 'Fechar formulário' : 'Novo objetivo',
+          onClick: () => setShowForm((current) => !current),
+          expanded: showForm,
+          controls: 'new-goal',
+        }}
+      />
 
       {showForm && (
         <form id="new-goal" className="goal-form glass-module" onSubmit={handleSubmit}>
