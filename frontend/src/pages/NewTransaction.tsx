@@ -5,6 +5,8 @@ import { api, type TransactionType } from '../api/client';
 import { AppLogo } from '../components/AppLogo';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
+import { Select } from '../components/Select';
+import { sortByName } from '../utils/sortByName';
 import './NewTransaction.css';
 
 function pad(value: number) {
@@ -58,16 +60,28 @@ export function NewTransactionPage() {
     enabled: Boolean(editingId),
   });
 
-  const availableCategories = categories?.filter(
-    (category) =>
-      category.type === type
-      && category.parentId
-      && (category.isActive || category.id === categoryId),
-  ) ?? [];
+  const availableCategories = sortByName(
+    categories?.filter(
+      (category) =>
+        category.type === type
+        && category.parentId
+        && (category.isActive || category.id === categoryId),
+    ) ?? [],
+  );
+  const categoryOptions = availableCategories.map((category) => ({
+    value: category.id,
+    label: category.name,
+    hint: categories?.find((item) => item.id === category.parentId)?.name,
+  }));
   const formAccounts = accounts?.filter(
     (account) =>
       account.isActive || account.id === accountId || account.id === toAccountId,
   ) ?? [];
+  const accountOptions = sortByName(formAccounts).map((account) => ({
+    value: account.id,
+    label: account.name,
+  }));
+  const destinationOptions = accountOptions.filter((account) => account.value !== accountId);
   const transferDisabled = accounts === undefined || formAccounts.length < 2;
 
   useEffect(() => {
@@ -220,17 +234,14 @@ export function NewTransactionPage() {
         {type !== 'TRANSFER' && (
           <div className="form-group">
             <label htmlFor="category">Categoria</label>
-            <select
+            <Select
               id="category"
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              onChange={setCategoryId}
+              options={categoryOptions}
+              placeholder="Selecione..."
               required
-            >
-              <option value="">Selecione...</option>
-              {availableCategories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
+            />
           </div>
         )}
 
@@ -249,17 +260,14 @@ export function NewTransactionPage() {
           {type !== 'TRANSFER' && (
             <div className="form-group">
               <label htmlFor="account">Conta de origem</label>
-              <select
+              <Select
                 id="account"
                 value={accountId}
-                onChange={(e) => selectOrigin(e.target.value)}
+                onChange={selectOrigin}
+                options={accountOptions}
+                placeholder="Selecione..."
                 required
-              >
-                <option value="">Selecione...</option>
-                {formAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name}</option>
-                ))}
-              </select>
+              />
             </div>
           )}
         </div>
@@ -268,33 +276,25 @@ export function NewTransactionPage() {
           <div className="form-row transfer-accounts">
             <div className="form-group">
               <label htmlFor="account">Conta de origem</label>
-              <select
+              <Select
                 id="account"
                 value={accountId}
-                onChange={(e) => selectOrigin(e.target.value)}
+                onChange={selectOrigin}
+                options={accountOptions}
+                placeholder="Selecione..."
                 required
-              >
-                <option value="">Selecione...</option>
-                {formAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>{account.name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div className="form-group">
               <label htmlFor="to-account">Conta de destino</label>
-              <select
+              <Select
                 id="to-account"
                 value={toAccountId}
-                onChange={(e) => setToAccountId(e.target.value)}
+                onChange={setToAccountId}
+                options={destinationOptions}
+                placeholder="Selecione..."
                 required
-              >
-                <option value="">Selecione...</option>
-                {formAccounts
-                  .filter((account) => account.id !== accountId)
-                  .map((account) => (
-                    <option key={account.id} value={account.id}>{account.name}</option>
-                  ))}
-              </select>
+              />
             </div>
           </div>
         )}

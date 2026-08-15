@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { budgetsToUpsert, monthSequence } from '../lib/budgetApply.js';
+import { budgetsToUpsert, monthLinesFromWizard, monthSequence } from '../lib/budgetApply.js';
 import { templateRemovalDecision } from '../lib/removalDecision.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -24,6 +24,11 @@ const applyTemplateSchema = z.object({
   startMonth: z.coerce.number().int().min(1).max(12),
   months: z.coerce.number().int().min(1).max(36),
   overwrite: z.boolean(),
+  monthLines: z.array(z.object({
+    year: z.coerce.number().int(),
+    month: z.coerce.number().int().min(1).max(12),
+    lines: z.array(lineSchema),
+  })).optional(),
 });
 
 const templateInclude = {
@@ -154,12 +159,30 @@ router.post('/:id/apply', async (req, res, next) => {
       },
       select: { categoryId: true, year: true, month: true },
     });
-    const { upsert, skipped } = budgetsToUpsert(
-      lines,
-      monthsList,
-      existing,
-      input.overwrite,
+    const monthDrafts = new Map(
+      (input.monthLines ?? []).map((draft) => [`${draft.year}-${draft.month}`, draft.lines]),
     );
+    const { upsert, skipped } = monthDrafts.size > 0
+      ? monthsList.reduce(
+          (acc, month) => {
+            const drafts = monthDrafts.get(`${month.year}-${month.month}`) ?? [];
+            const existingIds = existing
+              .filter((row) => row.year === month.year && row.month === month.month)
+              .map((row) => row.categoryId);
+            const result = budgetsToUpsert(
+              monthLinesFromWizard(lines, drafts, existingIds),
+              [month],
+              existing,
+              input.overwrite,
+              true,
+            );
+            acc.upsert.push(...result.upsert);
+            acc.skipped += result.skipped;
+            return acc;
+          },
+          { upsert: [] as ReturnType<typeof budgetsToUpsert>['upsert'], skipped: 0 },
+        )
+      : budgetsToUpsert(lines, monthsList, existing, input.overwrite);
 
     await prisma.$transaction(
       upsert.map(({ categoryId, year, month, amount }) =>

@@ -47,10 +47,10 @@ const updateCategorySchema = createCategorySchema.partial().extend({
 router.get('/', async (_req, res, next) => {
   try {
     const categories = await prisma.category.findMany({
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      orderBy: { name: 'asc' },
       include: {
         children: {
-          orderBy: { sortOrder: 'asc' },
+          orderBy: { name: 'asc' },
           include: { _count: { select: categoryCountSelect } },
         },
         _count: { select: categoryCountSelect },

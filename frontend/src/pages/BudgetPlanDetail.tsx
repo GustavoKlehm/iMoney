@@ -5,6 +5,7 @@ import { api, type BudgetPeriod } from '../api/client';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import { getCurrentPeriod, MONTH_NAMES } from '../utils/format';
+import { compareByName } from '../utils/sortByName';
 import './BudgetPlanDetail.css';
 
 const STEPS = [
@@ -82,10 +83,8 @@ export function BudgetPlanDetailPage() {
           })),
         )
         .sort((first, second) =>
-          `${first.parentName} ${first.name}`.localeCompare(
-            `${second.parentName} ${second.name}`,
-            'pt-BR',
-          ),
+          compareByName(first.name, second.name)
+          || compareByName(first.parentName, second.parentName),
         ),
     [categoriesQuery.data],
   );
@@ -127,6 +126,8 @@ export function BudgetPlanDetailPage() {
   const savePlan = useMutation({
     mutationFn: async (input: {
       lines: { categoryId: string; amount: number }[];
+      defaults: Record<string, number>;
+      categories: string[];
       startYear: number;
       startMonth: number;
       monthCount: number;
@@ -139,21 +140,18 @@ export function BudgetPlanDetailPage() {
         startMonth: input.startMonth,
         months: input.monthCount,
         overwrite: true,
-      });
-
-      await Promise.all(
-        input.periods.map(async (period) => {
-          const drafts = input.drafts[periodKey(period)] ?? {};
-          const budgets = await api.budgets.list(period.year, period.month);
-          await Promise.all(
-            budgets.map((budget) => {
-              const amount = drafts[budget.categoryId];
-              if (!amount || amount === Number(budget.limitAmount)) return undefined;
-              return api.budgets.update(budget.id, { limitAmount: amount });
-            }),
-          );
+        monthLines: input.periods.map((period) => {
+          const drafts = input.drafts[periodKey(period)] ?? input.defaults;
+          return {
+            year: period.year,
+            month: period.month,
+            lines: input.categories.map((categoryId) => ({
+              categoryId,
+              amount: drafts[categoryId] ?? input.defaults[categoryId] ?? 0,
+            })),
+          };
         }),
-      );
+      });
     },
     onSuccess: async () => {
       await Promise.all([
@@ -184,9 +182,13 @@ export function BudgetPlanDetailPage() {
           if (touchedMonthsRef.current.has(key) || budgets.length === 0) return;
           setMonthValues((current) => ({
             ...current,
-            [key]: Object.fromEntries(
-              budgets.map((budget) => [budget.categoryId, Number(budget.limitAmount)]),
-            ),
+            [key]: {
+              ...lineValues,
+              ...(current[key] ?? {}),
+              ...Object.fromEntries(
+                budgets.map((budget) => [budget.categoryId, Number(budget.limitAmount)]),
+              ),
+            },
           }));
         } catch {
           /* mantém a cópia do molde */
@@ -263,7 +265,7 @@ export function BudgetPlanDetailPage() {
         <section className="budget-detail-section glass-module">
           <div className="budget-detail-section__heading">
             <h2>Limites gerais</h2>
-            <p>Defina os valores padrão. Vazios não entram no planejamento.</p>
+            <p>Defina os valores padrão. Zero no molde ainda pode ganhar um limite em um mês específico.</p>
           </div>
           {expenseChildren.length === 0 ? (
             <p className="budget-detail-empty">
@@ -340,7 +342,7 @@ export function BudgetPlanDetailPage() {
         <section className="budget-months-section">
           <div className="budget-detail-section__heading">
             <h2>Ajustes por mês</h2>
-            <p>Personalize um mês sem mudar o molde dos demais.</p>
+            <p>Inclui categorias zeradas no molde. Zero neste mês permanece zero — não volta ao padrão.</p>
           </div>
           <div className="budget-months">
             {periods.map((period) => {
@@ -350,30 +352,31 @@ export function BudgetPlanDetailPage() {
                 <details key={key} className="budget-month glass-module">
                   <summary>{periodLabel(period)}</summary>
                   <div className="budget-month__limits">
-                    {expenseChildren
-                      .filter((category) => (lineValues[category.id] ?? 0) > 0)
-                      .map((category) => (
-                        <div key={category.id} className="budget-month__limit">
-                          <label htmlFor={`${key}-${category.id}`}>{category.name}</label>
-                          <div className="budget-money-field">
-                            <span aria-hidden="true">R$</span>
-                            <MoneyInput
-                              id={`${key}-${category.id}`}
-                              value={drafts[category.id] ?? 0}
-                              onChange={(nextValue) => {
-                                touchedMonthsRef.current.add(key);
-                                setMonthValues((current) => ({
-                                  ...current,
-                                  [key]: {
-                                    ...(current[key] ?? lineValues),
-                                    [category.id]: nextValue,
-                                  },
-                                }));
-                              }}
-                            />
-                          </div>
+                    {expenseChildren.map((category) => (
+                      <div key={category.id} className="budget-month__limit">
+                        <label htmlFor={`${key}-${category.id}`}>
+                          {category.name}
+                          <small>{category.parentName}</small>
+                        </label>
+                        <div className="budget-money-field">
+                          <span aria-hidden="true">R$</span>
+                          <MoneyInput
+                            id={`${key}-${category.id}`}
+                            value={drafts[category.id] ?? 0}
+                            onChange={(nextValue) => {
+                              touchedMonthsRef.current.add(key);
+                              setMonthValues((current) => ({
+                                ...current,
+                                [key]: {
+                                  ...(current[key] ?? lineValues),
+                                  [category.id]: nextValue,
+                                },
+                              }));
+                            }}
+                          />
                         </div>
-                      ))}
+                      </div>
+                    ))}
                   </div>
                 </details>
               );
@@ -416,6 +419,8 @@ export function BudgetPlanDetailPage() {
               if (!start || !validMonths) return;
               savePlan.mutate({
                 lines: templateLines,
+                defaults: lineValues,
+                categories: expenseChildren.map((category) => category.id),
                 startYear: start.year,
                 startMonth: start.month,
                 monthCount,

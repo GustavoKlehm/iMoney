@@ -8,16 +8,18 @@ import {
 } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
 import { PageLoading } from '../components/PageLoading';
+import { Select } from '../components/Select';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
 import { TRANSACTION_TYPE_LABELS } from '../utils/format';
+import { sortByName } from '../utils/sortByName';
 import './Categories.css';
 
 type CategoryKind = 'GROUP' | 'CHILD';
 type EditableCategoryType = Extract<TransactionType, 'INCOME' | 'EXPENSE'>;
 
 function sortChildren(children: Category[] = []) {
-  return [...children].sort((first, second) => Number(second.isActive) - Number(first.isActive));
+  return sortByName(children);
 }
 
 export function CategoriesPage() {
@@ -74,7 +76,7 @@ export function CategoriesPage() {
   }
 
   const categories = categoriesQuery.data ?? [];
-  const parents = categories.filter((category) => !category.parentId);
+  const parents = sortByName(categories.filter((category) => !category.parentId));
   const activeParents = parents.filter(
     (category) =>
       category.isActive && (category.type === 'INCOME' || category.type === 'EXPENSE'),
@@ -404,31 +406,31 @@ export function CategoriesPage() {
         {kind === 'GROUP' ? (
           <div className="glass-field">
             <label htmlFor="category-type">Tipo</label>
-            <select
+            <Select
               id="category-type"
               value={type}
-              onChange={(event) => setType(event.target.value as EditableCategoryType)}
-            >
-              <option value="EXPENSE">Saída</option>
-              <option value="INCOME">Entrada</option>
-            </select>
+              onChange={(nextType) => setType(nextType as EditableCategoryType)}
+              options={[
+                { value: 'EXPENSE', label: 'Saída' },
+                { value: 'INCOME', label: 'Entrada' },
+              ]}
+            />
           </div>
         ) : (
           <div className="glass-field">
             <label htmlFor="category-parent">Grupo</label>
-            <select
+            <Select
               id="category-parent"
               value={parentId}
-              onChange={(event) => selectParent(event.target.value)}
+              onChange={selectParent}
+              placeholder="Selecione..."
               required
-            >
-              <option value="">Selecione...</option>
-              {activeParents.map((parent) => (
-                <option key={parent.id} value={parent.id}>
-                  {parent.name} · {TRANSACTION_TYPE_LABELS[parent.type]}
-                </option>
-              ))}
-            </select>
+              options={activeParents.map((parent) => ({
+                value: parent.id,
+                label: parent.name,
+                hint: TRANSACTION_TYPE_LABELS[parent.type],
+              }))}
+            />
           </div>
         )}
 

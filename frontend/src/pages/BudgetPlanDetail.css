@@ -115,9 +115,17 @@
   font-weight: 600;
 }
 
-.budget-line small {
+.budget-line small,
+.budget-month__limit small {
   color: var(--text-muted);
   font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.budget-month__limit label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
 }
 
 .budget-money-field {

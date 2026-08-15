@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { ItemActions } from '../components/ItemActions';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
+import { Select } from '../components/Select';
 import { useConfirm } from '../components/ConfirmProvider';
 import { removalCopy } from '../utils/confirmRemoval';
 import { formatCurrency } from '../utils/format';
@@ -145,18 +146,20 @@ export function GoalsPage() {
 
           <div className="glass-field">
             <label htmlFor="goal-account">Cofrinho</label>
-            <select
+            <Select
               id="goal-account"
               value={accountId}
-              onChange={(event) => setAccountId(event.target.value)}
+              onChange={setAccountId}
+              placeholder="Selecione..."
               required
-            >
-              <option value="">Selecione...</option>
-              {reservedAccounts.map((account) => (
-                <option key={account.id} value={account.id}>{account.name}</option>
-              ))}
-              <option value={CREATE_PIGGY}>Criar cofrinho</option>
-            </select>
+              options={[
+                ...reservedAccounts.map((account) => ({
+                  value: account.id,
+                  label: account.name,
+                })),
+                { value: CREATE_PIGGY, label: 'Criar cofrinho' },
+              ]}
+            />
           </div>
 
           {accountId === CREATE_PIGGY && (

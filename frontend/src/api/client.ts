@@ -251,6 +251,11 @@ export interface ApplyBudgetTemplate {
   startMonth: number;
   months: number;
   overwrite: boolean;
+  monthLines?: {
+    year: number;
+    month: number;
+    lines: BudgetTemplateLineInput[];
+  }[];
 }
 
 export interface ApplyBudgetResult {
