@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { PlanType, TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { isGoalAchieved } from '../lib/goal.js';
+import { appNowParts, monthStart } from '../lib/appTime.js';
 import { monthRange } from '../lib/monthRange.js';
 import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
@@ -19,11 +20,9 @@ router.get('/monthly', async (req, res, next) => {
     const { year, month } = monthQuerySchema.parse(req.query);
     const { start, end } = monthRange(year, month);
     const daysInMonth = new Date(year, month, 0).getDate();
-    const today = new Date();
-    const isCurrentMonth =
-      today.getFullYear() === year && today.getMonth() === month - 1;
-    const daysElapsed =
-      isCurrentMonth ? today.getDate() : daysInMonth;
+    const today = appNowParts();
+    const isCurrentMonth = today.year === year && today.month === month;
+    const daysElapsed = isCurrentMonth ? today.day : daysInMonth;
 
     const [incomeAgg, expenseAgg, budgets, expensesByCategory] = await Promise.all([
       prisma.transaction.aggregate({
@@ -139,7 +138,7 @@ router.get('/monthly', async (req, res, next) => {
 
     const upcomingOccurrences = await prisma.recurrenceOccurrence.findMany({
       where: {
-        dueDate: { gte: start, lt: new Date(year, month + 2, 1) },
+        dueDate: { gte: start, lt: monthStart(year + Math.floor((month + 2) / 12), ((month + 2) % 12) + 1) },
         status: 'PENDING',
       },
       include: { recurrence: { include: { category: true } } },

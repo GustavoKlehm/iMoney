@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma, TransactionType } from '@prisma/client';
+import { parseAppDateTime } from '../lib/appTime.js';
+import { monthRange } from '../lib/monthRange.js';
 import { prisma } from '../lib/prisma.js';
 import { baseTransactionSchema, createTransactionSchema } from '../lib/transactionValidation.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -30,8 +32,7 @@ router.get('/', async (req, res, next) => {
       where.OR = [{ accountId: query.accountId }, { toAccountId: query.accountId }];
     }
     if (query.year && query.month) {
-      const start = new Date(query.year, query.month - 1, 1);
-      const end = new Date(query.year, query.month, 1);
+      const { start, end } = monthRange(query.year, query.month);
       where.date = { gte: start, lt: end };
     }
 
@@ -88,7 +89,7 @@ router.post('/', async (req, res, next) => {
     const transaction = await prisma.transaction.create({
       data: {
         ...data,
-        date: new Date(data.date),
+        date: parseAppDateTime(data.date),
         amount: data.amount,
       },
       include: { category: true, account: true, toAccount: true },
@@ -114,7 +115,9 @@ router.patch('/:id', async (req, res, next) => {
 
     for (const [key, value] of Object.entries(data)) {
       const oldVal = existing[key as keyof typeof existing];
-      const newVal = key === 'date' && value ? new Date(value as string).toISOString().slice(0, 10) : String(value ?? '');
+      const newVal = key === 'date' && value
+        ? parseAppDateTime(value as string).toISOString()
+        : String(value ?? '');
       const oldStr = oldVal instanceof Date ? oldVal.toISOString().slice(0, 10) : String(oldVal ?? '');
       if (oldStr !== newVal) {
         auditFields.push({ field: key, oldValue: oldStr, newValue: newVal });
@@ -135,7 +138,7 @@ router.patch('/:id', async (req, res, next) => {
         where: { id: req.params.id },
         data: {
           ...data,
-          date: data.date ? new Date(data.date) : undefined,
+          date: data.date ? parseAppDateTime(data.date) : undefined,
         },
         include: { category: true, account: true, toAccount: true },
       });

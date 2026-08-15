@@ -1,3 +1,5 @@
+import { APP_TIMEZONE, getAppPeriod } from './appTime';
+
 const MAX_MONEY_CENTS = 9_999_999_999;
 
 export function formatCurrency(value: number): string {
@@ -42,14 +44,15 @@ export function removeMoneyDigit(cents: number): number {
 
 export function formatDate(date: string | Date): string {
   const d = typeof date === 'string'
-    ? new Date(date.includes('T') ? date : `${date}T12:00:00`)
+    ? new Date(date.includes('T') ? date : `${date}T12:00:00-03:00`)
     : date;
-  return d.toLocaleDateString('pt-BR');
+  return d.toLocaleDateString('pt-BR', { timeZone: APP_TIMEZONE });
 }
 
 export function formatDateTime(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString('pt-BR', {
+    timeZone: APP_TIMEZONE,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -59,8 +62,7 @@ export function formatDateTime(date: string | Date): string {
 }
 
 export function getCurrentPeriod(): { year: number; month: number } {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  return getAppPeriod();
 }
 
 export const MONTH_NAMES = [

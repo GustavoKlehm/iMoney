@@ -6,22 +6,9 @@ import { AppLogo } from '../components/AppLogo';
 import { MoneyInput } from '../components/MoneyInput';
 import { PageLoading } from '../components/PageLoading';
 import { Select } from '../components/Select';
+import { toAppDateTimeLocal } from '../utils/appTime';
 import { sortByName } from '../utils/sortByName';
 import './NewTransaction.css';
-
-function pad(value: number) {
-  return String(value).padStart(2, '0');
-}
-
-function nowLocal(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-}
-
-function toDatetimeLocal(value: string): string {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 function getInitialType(value: string | null): TransactionType {
   return value === 'INCOME' || value === 'EXPENSE' || value === 'TRANSFER'
@@ -41,7 +28,7 @@ export function NewTransactionPage() {
   const [categoryId, setCategoryId] = useState('');
   const [accountId, setAccountId] = useState(() => searchParams.get('accountId') ?? '');
   const [toAccountId, setToAccountId] = useState(() => searchParams.get('toAccountId') ?? '');
-  const [date, setDate] = useState(nowLocal);
+  const [date, setDate] = useState(() => toAppDateTimeLocal());
   const [filled, setFilled] = useState(false);
 
   const { data: categories } = useQuery({
@@ -93,7 +80,7 @@ export function NewTransactionPage() {
     setCategoryId(transaction.category?.id ?? '');
     setAccountId(transaction.account?.id ?? '');
     setToAccountId(transaction.toAccount?.id ?? '');
-    setDate(toDatetimeLocal(transaction.date));
+    setDate(toAppDateTimeLocal(transaction.date));
     setFilled(true);
   }, [filled, transactionQuery.data]);
 
