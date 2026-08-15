@@ -42,3 +42,9 @@
     background: rgba(45, 27, 78, 0.94);
   }
 }
+
+@media (max-width: 767px) {
+  .back-link--transactions-mobile {
+    display: none;
+  }
+}

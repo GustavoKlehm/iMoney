@@ -1,4 +1,4 @@
-.transactions-page .page-header {
+.transactions-page .transactions-desktop-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6,9 +6,53 @@
   text-align: left;
 }
 
-.transactions-page .page-header .btn-primary {
+.transactions-page .transactions-desktop-header .btn-primary {
   min-height: 44px;
   flex-shrink: 0;
+}
+
+.transactions-mobile-toolbar {
+  display: none;
+}
+
+.transactions-mobile-subtitle {
+  display: none;
+}
+
+.transactions-mobile-toolbar__btn.liquid-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(26, 11, 46, 0.64);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.transactions-mobile-toolbar__btn.liquid-glass:hover {
+  border-color: var(--lg-border);
+  background: rgba(26, 11, 46, 0.72);
+}
+
+.transactions-mobile-toolbar__btn.liquid-glass:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.transactions-mobile-toolbar__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .transactions-list {
@@ -160,13 +204,27 @@
 }
 
 @media (max-width: 767px) {
-  .transactions-page .page-header {
-    align-items: stretch;
-    flex-direction: column;
+  .transactions-page-header {
+    margin-bottom: 1rem;
   }
 
-  .transactions-page .page-header .btn-primary {
-    width: 100%;
+  .transactions-mobile-toolbar {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .transactions-desktop-header {
+    display: none;
+  }
+
+  .transactions-mobile-subtitle {
+    display: block;
+    margin: 0 0 0.75rem;
+    text-align: center;
+    font-size: 0.8rem;
   }
 
   .transaction-row {
@@ -201,6 +259,12 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .transactions-list {
+    background: rgba(45, 27, 78, 0.94);
+  }
+
+  .transactions-mobile-toolbar__btn.liquid-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     background: rgba(45, 27, 78, 0.94);
   }
 }

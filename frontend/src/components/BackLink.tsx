@@ -18,13 +18,19 @@ function parentPath(pathname: string): string | null {
   return '/';
 }
 
-export function BackLink() {
+interface BackLinkProps {
+  className?: string;
+}
+
+export function BackLink({ className }: BackLinkProps = {}) {
   const { pathname } = useLocation();
   const to = parentPath(pathname);
   if (!to) return null;
 
+  const classes = className ? `back-link liquid-glass ${className}` : 'back-link liquid-glass';
+
   return (
-    <Link to={to} className="back-link liquid-glass">
+    <Link to={to} className={classes}>
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path
           d="M10.25 3.5 5.75 8l4.5 4.5"
