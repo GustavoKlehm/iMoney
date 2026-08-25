@@ -223,10 +223,30 @@
 }
 
 .budget-item {
+  display: block;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   padding: 0.75rem 0.875rem;
   min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.budget-item:hover {
+  background: var(--lg-tint-hover);
+}
+
+.budget-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .budget-item {
+    transition: none;
+  }
 }
 
 .budget-item--on_track { border-color: var(--success); }
