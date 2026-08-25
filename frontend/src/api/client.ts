@@ -65,6 +65,12 @@ export const api = {
       const qs = new URLSearchParams();
       if (params?.year) qs.set('year', String(params.year));
       if (params?.month) qs.set('month', String(params.month));
+      if (params?.categoryId) qs.set('categoryId', params.categoryId);
+      if (params?.search) qs.set('search', params.search);
+      if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
+      if (params?.dateTo) qs.set('dateTo', params.dateTo);
+      if (params?.minAmount !== undefined) qs.set('minAmount', String(params.minAmount));
+      if (params?.maxAmount !== undefined) qs.set('maxAmount', String(params.maxAmount));
       if (params?.limit) qs.set('limit', String(params.limit));
       const query = qs.toString();
       return request<TransactionListResponse>(`/transactions${query ? `?${query}` : ''}`);
@@ -192,6 +198,12 @@ export interface CreateTransaction {
 export interface TransactionListParams {
   year?: number;
   month?: number;
+  categoryId?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  minAmount?: number;
+  maxAmount?: number;
   limit?: number;
 }
 

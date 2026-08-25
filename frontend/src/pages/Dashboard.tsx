@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { api, type PaceStatus } from '../api/client';
 import { LiquidProgress } from '../components/LiquidProgress';
 import { PageLoading } from '../components/PageLoading';
@@ -123,9 +124,11 @@ export function DashboardPage() {
           <h2 id="budget-heading" className="section-title">Orçamento por categoria</h2>
           <div className="budget-grid">
             {budgetItems.map((item) => (
-              <article
+              <Link
                 key={item.category.id}
+                to={`/lancamentos?categoria=${encodeURIComponent(item.category.id)}`}
                 className={`budget-item${item.paceStatus ? ` budget-item--${item.paceStatus}` : ''}`}
+                aria-label={`Ver lançamentos de ${item.category.name}`}
               >
                 <div className="budget-header">
                   <div className="budget-title">
@@ -163,7 +166,7 @@ export function DashboardPage() {
                     <> · Projeção: {formatCurrency(item.projected)}</>
                   )}
                 </p>
-              </article>
+              </Link>
             ))}
           </div>
         </section>

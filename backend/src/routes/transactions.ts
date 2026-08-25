@@ -1,40 +1,19 @@
 import { Router } from 'express';
-import { z } from 'zod';
-import { Prisma, TransactionType } from '@prisma/client';
 import { parseAppDateTime } from '../lib/appTime.js';
-import { monthRange } from '../lib/monthRange.js';
 import { prisma } from '../lib/prisma.js';
+import {
+  buildTransactionListWhere,
+  transactionListQuerySchema,
+} from '../lib/transactionListQuery.js';
 import { baseTransactionSchema, createTransactionSchema } from '../lib/transactionValidation.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-const listQuerySchema = z.object({
-  year: z.coerce.number().int().optional(),
-  month: z.coerce.number().int().min(1).max(12).optional(),
-  type: z.nativeEnum(TransactionType).optional(),
-  categoryId: z.string().min(1).optional(),
-  accountId: z.string().uuid().optional(),
-  includeCancelled: z.coerce.boolean().optional(),
-  limit: z.coerce.number().int().min(1).max(500).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
-
 router.get('/', async (req, res, next) => {
   try {
-    const query = listQuerySchema.parse(req.query);
-    const where: Prisma.TransactionWhereInput = {};
-
-    if (!query.includeCancelled) where.isCancelled = false;
-    if (query.type) where.type = query.type;
-    if (query.categoryId) where.categoryId = query.categoryId;
-    if (query.accountId) {
-      where.OR = [{ accountId: query.accountId }, { toAccountId: query.accountId }];
-    }
-    if (query.year && query.month) {
-      const { start, end } = monthRange(query.year, query.month);
-      where.date = { gte: start, lt: end };
-    }
+    const query = transactionListQuerySchema.parse(req.query);
+    const where = buildTransactionListWhere(query);
 
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
