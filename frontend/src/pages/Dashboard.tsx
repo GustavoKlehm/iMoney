@@ -1,9 +1,19 @@
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api, type PaceStatus } from '../api/client';
 import { LiquidProgress } from '../components/LiquidProgress';
 import { PageLoading } from '../components/PageLoading';
 import { formatCurrency, getCurrentPeriod, MONTH_NAMES, PACE_STATUS_LABELS } from '../utils/format';
+import {
+  isSamePeriod,
+  maxPeriod,
+  periodKey,
+  parsePeriod,
+  previousPeriod,
+  readPeriodFromSearch,
+  type YearMonth,
+} from '../utils/period';
 import './Dashboard.css';
 
 function paceVariant(status: PaceStatus | null): 'default' | 'success' | 'warning' | 'danger' {
@@ -13,13 +23,72 @@ function paceVariant(status: PaceStatus | null): 'default' | 'success' | 'warnin
   return 'success';
 }
 
+function FunnelIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="M4 5.5h16l-6.2 7.2v4.8L10.2 19v-6.3L4 5.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function DashboardPage() {
-  const { year, month } = getCurrentPeriod();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPeriod = getCurrentPeriod();
+  const previous = previousPeriod(currentPeriod);
+  const selected = readPeriodFromSearch(searchParams, currentPeriod);
+  const { year, month } = selected;
+  const monthInputRef = useRef<HTMLInputElement>(null);
+
+  const isCurrent = isSamePeriod(selected, currentPeriod);
+  const isPrevious = isSamePeriod(selected, previous);
+  const isCustom = !isCurrent && !isPrevious;
+
+  const { data: periodBounds } = useQuery({
+    queryKey: ['dashboard-periods'],
+    queryFn: api.dashboardPeriods,
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard', year, month],
     queryFn: () => api.dashboard(year, month),
   });
+
+  function setPeriod(period: YearMonth) {
+    if (isSamePeriod(period, currentPeriod)) {
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    setSearchParams(
+      { ano: String(period.year), mes: String(period.month) },
+      { replace: true },
+    );
+  }
+
+  const pickerMin = periodBounds?.earliest ?? currentPeriod;
+  const pickerMax = periodBounds?.latest
+    ? maxPeriod(periodBounds.latest, currentPeriod)
+    : currentPeriod;
+
+  function openMonthPicker() {
+    const input = monthInputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Alguns browsers só permitem showPicker a partir de gesture direto no input.
+      }
+    }
+    input.focus();
+    input.click();
+  }
 
   if (isLoading) return <PageLoading message="Carregando dashboard..." />;
   if (error) return <div className="page-error">Erro ao carregar: {(error as Error).message}</div>;
@@ -37,6 +106,47 @@ export function DashboardPage() {
       <header className="page-header page-header--compact">
         <h1>Dashboard</h1>
         <p className="subtitle">{MONTH_NAMES[month - 1]} de {year}</p>
+        <div className="dash-period" role="group" aria-label="Período do dashboard">
+          <button
+            type="button"
+            className={`dash-period__pill${isCurrent ? ' is-active' : ''}`}
+            aria-pressed={isCurrent}
+            onClick={() => setPeriod(currentPeriod)}
+          >
+            Mês atual
+          </button>
+          <button
+            type="button"
+            className={`dash-period__pill${isPrevious ? ' is-active' : ''}`}
+            aria-pressed={isPrevious}
+            onClick={() => setPeriod(previous)}
+          >
+            Mês anterior
+          </button>
+          <label
+            className={`dash-period__funnel${isCustom ? ' has-filters' : ''}`}
+            htmlFor="dashboard-month"
+          >
+            <span className="dash-period__funnel-icon" aria-hidden="true">
+              <FunnelIcon />
+            </span>
+            <input
+              ref={monthInputRef}
+              id="dashboard-month"
+              className="dash-period__month-input"
+              type="month"
+              value={periodKey(selected)}
+              min={periodKey(pickerMin)}
+              max={periodKey(pickerMax)}
+              aria-label="Escolher mês"
+              onClick={openMonthPicker}
+              onChange={(event) => {
+                const next = parsePeriod(event.target.value);
+                if (next) setPeriod(next);
+              }}
+            />
+          </label>
+        </div>
       </header>
 
       <section className="hero-balance glass-module" aria-label="Saldo livre">

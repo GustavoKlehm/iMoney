@@ -4,6 +4,7 @@ import { PlanType, TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { appNowParts, monthStart } from '../lib/appTime.js';
 import { filterDashboardGoals } from '../lib/dashboardGoals.js';
+import { summarizeTransactionPeriods } from '../lib/dashboardPeriods.js';
 import { monthRange } from '../lib/monthRange.js';
 import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
@@ -18,6 +19,27 @@ const router = Router();
 const monthQuerySchema = z.object({
   year: z.coerce.number().int(),
   month: z.coerce.number().int().min(1).max(12),
+});
+
+router.get('/periods', async (_req, res, next) => {
+  try {
+    const [first, last] = await Promise.all([
+      prisma.transaction.findFirst({
+        where: { isCancelled: false },
+        orderBy: { date: 'asc' },
+        select: { date: true },
+      }),
+      prisma.transaction.findFirst({
+        where: { isCancelled: false },
+        orderBy: { date: 'desc' },
+        select: { date: true },
+      }),
+    ]);
+    const dates = [first?.date, last?.date].filter((date): date is Date => date != null);
+    res.json(summarizeTransactionPeriods(dates));
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.get('/monthly', async (req, res, next) => {
