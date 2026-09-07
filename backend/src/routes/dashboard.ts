@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { PlanType, TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
-import { isGoalAchieved } from '../lib/goal.js';
 import { appNowParts, monthStart } from '../lib/appTime.js';
+import { filterDashboardGoals } from '../lib/dashboardGoals.js';
 import { monthRange } from '../lib/monthRange.js';
 import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
@@ -172,18 +172,19 @@ router.get('/monthly', async (req, res, next) => {
     });
 
     const activePlans = await prisma.plan.findMany({
-      where: { status: 'ACTIVE', type: PlanType.GOAL },
+      where: {
+        status: 'ACTIVE',
+        type: PlanType.GOAL,
+        accountId: { not: null },
+      },
       include: { category: true },
     });
-    const visibleActivePlans = activePlans.flatMap((plan) => {
+    const enrichedPlans = activePlans.map((plan) => {
       const targetAmount = Number(plan.targetAmount);
-      const currentAmount = plan.type === 'GOAL' && plan.accountId
+      const currentAmount = plan.accountId
         ? balanceByAccount.get(plan.accountId) ?? 0
         : Number(plan.currentAmount);
-      if (plan.type === 'GOAL' && isGoalAchieved(targetAmount, currentAmount)) {
-        return [];
-      }
-      return [{
+      return {
         ...plan,
         targetAmount,
         currentAmount,
@@ -191,8 +192,9 @@ router.get('/monthly', async (req, res, next) => {
         progress: targetAmount > 0
           ? Math.round((currentAmount / targetAmount) * 1000) / 10
           : 0,
-      }];
+      };
     });
+    const visibleActivePlans = filterDashboardGoals(enrichedPlans);
 
     res.json({
       period: { year, month, daysInMonth, daysElapsed },

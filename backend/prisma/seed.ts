@@ -162,18 +162,13 @@ async function main() {
     },
   });
 
-  await prisma.plan.upsert({
-    where: { id: '00000000-0000-4000-8000-000000000011' },
-    update: {},
-    create: {
-      id: '00000000-0000-4000-8000-000000000011',
-      name: 'Reserva de emergência',
-      type: PlanType.GOAL,
-      targetAmount: 10000,
-      currentAmount: 0,
-      startDate: new Date('2026-08-01'),
-      status: PlanStatus.ACTIVE,
-      priority: PlanPriority.MEDIUM,
+  // Remove meta GOAL legada sem cofrinho (aparecia duplicada no Dashboard).
+  await prisma.plan.deleteMany({
+    where: {
+      OR: [
+        { id: '00000000-0000-4000-8000-000000000011' },
+        { type: PlanType.GOAL, accountId: null },
+      ],
     },
   });
 
