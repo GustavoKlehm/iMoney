@@ -66,6 +66,7 @@ export const api = {
       if (params?.year) qs.set('year', String(params.year));
       if (params?.month) qs.set('month', String(params.month));
       if (params?.categoryId) qs.set('categoryId', params.categoryId);
+      if (params?.accountId) qs.set('accountId', params.accountId);
       if (params?.search) qs.set('search', params.search);
       if (params?.dateFrom) qs.set('dateFrom', params.dateFrom);
       if (params?.dateTo) qs.set('dateTo', params.dateTo);
@@ -199,6 +200,7 @@ export interface TransactionListParams {
   year?: number;
   month?: number;
   categoryId?: string;
+  accountId?: string;
   search?: string;
   dateFrom?: string;
   dateTo?: string;

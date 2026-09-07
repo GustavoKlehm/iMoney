@@ -23,6 +23,7 @@ const COMPACT_QUERY = '(max-width: 767px)';
 
 type PanelFilters = {
   categoryId: string;
+  accountId: string;
   dateFrom: string;
   dateTo: string;
   minAmount: number;
@@ -32,6 +33,7 @@ type PanelFilters = {
 function emptyPanelFilters(): PanelFilters {
   return {
     categoryId: '',
+    accountId: '',
     dateFrom: '',
     dateTo: '',
     minAmount: 0,
@@ -46,6 +48,7 @@ function readPanelFromSearch(params: URLSearchParams): PanelFilters {
   const maxAmount = maxRaw && Number.isFinite(Number(maxRaw)) ? Number(maxRaw) : 0;
   return {
     categoryId: params.get('categoria') ?? '',
+    accountId: params.get('conta') ?? '',
     dateFrom: params.get('de') ?? '',
     dateTo: params.get('ate') ?? '',
     minAmount,
@@ -56,6 +59,7 @@ function readPanelFromSearch(params: URLSearchParams): PanelFilters {
 function countActivePanelFilters(filters: PanelFilters): number {
   let count = 0;
   if (filters.categoryId) count += 1;
+  if (filters.accountId) count += 1;
   if (filters.dateFrom || filters.dateTo) count += 1;
   if (filters.minAmount > 0 || filters.maxAmount > 0) count += 1;
   return count;
@@ -208,6 +212,7 @@ export function TransactionsPage() {
 
   const panelKey = [
     appliedPanel.categoryId,
+    appliedPanel.accountId,
     appliedPanel.dateFrom,
     appliedPanel.dateTo,
     appliedPanel.minAmount,
@@ -244,6 +249,7 @@ export function TransactionsPage() {
         }
       : { year, month }),
     categoryId: appliedPanel.categoryId || undefined,
+    accountId: appliedPanel.accountId || undefined,
     search: deferredSearch || undefined,
     minAmount: appliedPanel.minAmount > 0 ? appliedPanel.minAmount : undefined,
     maxAmount: appliedPanel.maxAmount > 0 ? appliedPanel.maxAmount : undefined,
@@ -258,6 +264,11 @@ export function TransactionsPage() {
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: api.categories.list,
+  });
+
+  const { data: accounts } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: api.accounts.list,
   });
 
   const removeTransaction = useMutation({
@@ -277,12 +288,24 @@ export function TransactionsPage() {
     hint: categories?.find((item) => item.id === category.parentId)?.name,
   }));
 
+  const accountOptions = sortByName(
+    (accounts ?? []).filter(
+      (account) => account.isActive || account.id === appliedPanel.accountId,
+    ),
+  ).map((account) => ({
+    value: account.id,
+    label: account.name,
+    hint: account.isReserved ? 'Cofrinho' : 'Conta',
+  }));
+
   const selectedCategoryName = categories?.find((item) => item.id === appliedPanel.categoryId)?.name;
+  const selectedAccountName = accounts?.find((item) => item.id === appliedPanel.accountId)?.name;
 
   function writeUrlParams(nextPanel: PanelFilters, nextSearch = searchInput.trim()) {
     const next = new URLSearchParams();
     if (nextSearch) next.set('q', nextSearch);
     if (nextPanel.categoryId) next.set('categoria', nextPanel.categoryId);
+    if (nextPanel.accountId) next.set('conta', nextPanel.accountId);
     if (nextPanel.dateFrom) next.set('de', nextPanel.dateFrom);
     if (nextPanel.dateTo) next.set('ate', nextPanel.dateTo);
     if (nextPanel.minAmount > 0) next.set('min', String(nextPanel.minAmount));
@@ -310,6 +333,12 @@ export function TransactionsPage() {
 
   function removeCategoryFilter() {
     const next = { ...appliedPanel, categoryId: '' };
+    setDraftPanel(next);
+    writeUrlParams(next);
+  }
+
+  function removeAccountFilter() {
+    const next = { ...appliedPanel, accountId: '' };
     setDraftPanel(next);
     writeUrlParams(next);
   }
@@ -383,6 +412,17 @@ export function TransactionsPage() {
                 <span aria-hidden="true">×</span>
               </button>
             )}
+            {appliedPanel.accountId && (
+              <button
+                type="button"
+                className="tx-filter-chip"
+                onClick={removeAccountFilter}
+                aria-label={`Remover filtro de conta ${selectedAccountName ?? ''}`}
+              >
+                {selectedAccountName ?? 'Conta'}
+                <span aria-hidden="true">×</span>
+              </button>
+            )}
             {(appliedPanel.dateFrom || appliedPanel.dateTo) && (
               <span className="tx-filter-chip tx-filter-chip--static">
                 {appliedPanel.dateFrom || '…'}
@@ -417,6 +457,20 @@ export function TransactionsPage() {
                   ...categoryOptions,
                 ]}
                 placeholder="Todas as categorias"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor={`${filtersId}-account`}>Conta</label>
+              <Select
+                id={`${filtersId}-account`}
+                value={draftPanel.accountId}
+                onChange={(value) => setDraftPanel((current) => ({ ...current, accountId: value }))}
+                options={[
+                  { value: '', label: 'Todas as contas' },
+                  ...accountOptions,
+                ]}
+                placeholder="Todas as contas"
               />
             </div>
 
