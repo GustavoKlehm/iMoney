@@ -11,6 +11,99 @@
   font-size: 1.35rem;
 }
 
+.dash-period {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.dash-period__pill {
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.dash-period__pill:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.dash-period__pill.is-active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.dash-period__pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.dash-period__funnel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.dash-period__funnel:hover,
+.dash-period__funnel:focus-within {
+  background: var(--lg-tint-hover);
+  color: var(--text);
+}
+
+.dash-period__funnel.has-filters {
+  color: var(--primary);
+  border-color: rgba(141, 169, 244, 0.45);
+}
+
+.dash-period__funnel-icon {
+  display: inline-flex;
+  pointer-events: none;
+}
+
+.dash-period__month-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+
+.dash-period__month-input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-pill);
+  opacity: 0.01;
+}
+
 /* ── Hero: saldo livre ── */
 
 .hero-balance {

@@ -38,6 +38,9 @@ export const api = {
   dashboard: (year: number, month: number) =>
     request<DashboardData>(`/dashboard/monthly?year=${year}&month=${month}`),
 
+  dashboardPeriods: () =>
+    request<DashboardPeriods>('/dashboard/periods'),
+
   categories: {
     list: () => request<Category[]>('/categories'),
     create: (data: CreateCategory) =>
@@ -319,6 +322,11 @@ export interface BudgetProgress {
   paceRatio: number;
   paceStatus: PaceStatus | null;
   alert: string | null;
+}
+
+export interface DashboardPeriods {
+  earliest: { year: number; month: number } | null;
+  latest: { year: number; month: number } | null;
 }
 
 export interface DashboardData {
