@@ -346,6 +346,12 @@
 .budget-item--warning { border-color: var(--warning); }
 .budget-item--over_pace,
 .budget-item--over_limit { border-color: var(--danger); }
+.budget-item--unplanned { border-color: var(--border); }
+
+.pace-badge--unplanned {
+  color: var(--text-muted);
+  border-color: var(--border);
+}
 
 .budget-header {
   display: flex;

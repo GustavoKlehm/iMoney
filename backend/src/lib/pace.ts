@@ -17,6 +17,8 @@ export function paceStatus(params: {
   daysInMonth: number;
   isCurrentMonth: boolean;
 }): PaceStatus | null {
+  // Sem limite planejado não há ritmo a comparar (gasto fora do planejamento).
+  if (params.limit <= 0) return null;
   if (params.spent >= params.limit) return 'over_limit';
   if (!params.isCurrentMonth) return null;
   const expected = expectedToDate(params.limit, params.day, params.daysInMonth);

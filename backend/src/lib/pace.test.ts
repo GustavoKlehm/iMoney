@@ -43,3 +43,12 @@ describe('paceStatus outro mês', () => {
     );
   });
 });
+
+describe('paceStatus sem limite', () => {
+  it('limit 0 → null mesmo com gasto', () => {
+    assert.equal(
+      paceStatus({ spent: 150, limit: 0, day: 10, daysInMonth: 30, isCurrentMonth: true }),
+      null,
+    );
+  });
+});

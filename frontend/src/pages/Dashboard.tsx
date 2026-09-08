@@ -233,51 +233,72 @@ export function DashboardPage() {
         <section className="section budget-section" aria-labelledby="budget-heading">
           <h2 id="budget-heading" className="section-title">Orçamento por categoria</h2>
           <div className="budget-grid">
-            {budgetItems.map((item) => (
-              <Link
-                key={item.category.id}
-                to={`/lancamentos?categoria=${encodeURIComponent(item.category.id)}`}
-                className={`budget-item${item.paceStatus ? ` budget-item--${item.paceStatus}` : ''}`}
-                aria-label={`Ver lançamentos de ${item.category.name}`}
-              >
-                <div className="budget-header">
-                  <div className="budget-title">
-                    <span className="budget-name" title={item.category.name}>
-                      {item.category.name}
-                    </span>
-                    {item.paceStatus && (
-                      <span className={`pace-badge pace-badge--header pace-badge--${item.paceStatus}`}>
-                        {PACE_STATUS_LABELS[item.paceStatus]}
+            {budgetItems.map((item) => {
+              const hasPlan = item.limit > 0;
+              return (
+                <Link
+                  key={item.category.id}
+                  to={`/lancamentos?categoria=${encodeURIComponent(item.category.id)}`}
+                  className={`budget-item${item.paceStatus ? ` budget-item--${item.paceStatus}` : ''}${!hasPlan ? ' budget-item--unplanned' : ''}`}
+                  aria-label={`Ver lançamentos de ${item.category.name}`}
+                >
+                  <div className="budget-header">
+                    <div className="budget-title">
+                      <span className="budget-name" title={item.category.name}>
+                        {item.category.name}
                       </span>
-                    )}
-                  </div>
-                  <span className="budget-amounts">
-                    {formatCurrency(item.spent)} / {formatCurrency(item.limit)}
-                  </span>
-                </div>
-                <LiquidProgress
-                  value={item.percent}
-                  variant={paceVariant(item.paceStatus)}
-                  size="thin"
-                  label={`Orçamento ${item.category.name}: ${item.percent}% usado`}
-                />
-                <div className="budget-footer">
-                  <span>{item.percent}%</span>
-                  <span>Restam {formatCurrency(item.remaining)}</span>
-                  {item.paceStatus && (
-                    <span className={`pace-badge pace-badge--footer pace-badge--${item.paceStatus}`}>
-                      {PACE_STATUS_LABELS[item.paceStatus]}
+                      {!hasPlan && (
+                        <span className="pace-badge pace-badge--header pace-badge--unplanned">
+                          Sem orçamento
+                        </span>
+                      )}
+                      {item.paceStatus && (
+                        <span className={`pace-badge pace-badge--header pace-badge--${item.paceStatus}`}>
+                          {PACE_STATUS_LABELS[item.paceStatus]}
+                        </span>
+                      )}
+                    </div>
+                    <span className="budget-amounts">
+                      {hasPlan
+                        ? `${formatCurrency(item.spent)} / ${formatCurrency(item.limit)}`
+                        : formatCurrency(item.spent)}
                     </span>
+                  </div>
+                  {hasPlan ? (
+                    <>
+                      <LiquidProgress
+                        value={item.percent}
+                        variant={paceVariant(item.paceStatus)}
+                        size="thin"
+                        label={`Orçamento ${item.category.name}: ${item.percent}% usado`}
+                      />
+                      <div className="budget-footer">
+                        <span>{item.percent}%</span>
+                        <span>Restam {formatCurrency(item.remaining)}</span>
+                        {item.paceStatus && (
+                          <span className={`pace-badge pace-badge--footer pace-badge--${item.paceStatus}`}>
+                            {PACE_STATUS_LABELS[item.paceStatus]}
+                          </span>
+                        )}
+                      </div>
+                      <p className="budget-pace-detail">
+                        Esperado até hoje: {formatCurrency(item.expectedToDate)}
+                        {(item.paceStatus === 'over_pace' || item.paceStatus === 'over_limit') && (
+                          <> · Projeção: {formatCurrency(item.projected)}</>
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <div className="budget-footer">
+                      <span className="pace-badge pace-badge--footer pace-badge--unplanned">
+                        Sem orçamento
+                      </span>
+                      <span>Gasto no mês</span>
+                    </div>
                   )}
-                </div>
-                <p className="budget-pace-detail">
-                  Esperado até hoje: {formatCurrency(item.expectedToDate)}
-                  {(item.paceStatus === 'over_pace' || item.paceStatus === 'over_limit') && (
-                    <> · Projeção: {formatCurrency(item.projected)}</>
-                  )}
-                </p>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

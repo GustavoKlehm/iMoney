@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { PlanType, TransactionType } from '@prisma/client';
 import { accountBalance } from '../lib/accountBalance.js';
 import { appNowParts, monthStart } from '../lib/appTime.js';
+import { buildBudgetProgress } from '../lib/budgetProgress.js';
 import { filterDashboardGoals } from '../lib/dashboardGoals.js';
 import { summarizeTransactionPeriods } from '../lib/dashboardPeriods.js';
 import { monthRange } from '../lib/monthRange.js';
-import { expectedToDate, paceStatus, projectedMonth } from '../lib/pace.js';
 import { prisma } from '../lib/prisma.js';
 import {
   projectedFreeBalance,
@@ -78,47 +78,37 @@ router.get('/monthly', async (req, res, next) => {
 
     const income = Number(incomeAgg._sum.amount ?? 0);
     const expenses = Number(expenseAgg._sum.amount ?? 0);
-    const spentByCategory = new Map(
-      expensesByCategory.map((e) => [e.categoryId, Number(e._sum.amount ?? 0)]),
-    );
+    const spentRows = expensesByCategory.map((e) => ({
+      categoryId: e.categoryId,
+      spent: Number(e._sum.amount ?? 0),
+    }));
+    const budgetedIds = new Set(budgets.map((b) => b.categoryId));
+    const unplannedCategoryIds = [
+      ...new Set(
+        spentRows
+          .filter((row) => row.categoryId && row.spent > 0 && !budgetedIds.has(row.categoryId))
+          .map((row) => row.categoryId as string),
+      ),
+    ];
+    const unplannedCategories = unplannedCategoryIds.length
+      ? await prisma.category.findMany({ where: { id: { in: unplannedCategoryIds } } })
+      : [];
+    const categoriesById = new Map<string, (typeof budgets)[number]['category']>([
+      ...budgets.map((b) => [b.categoryId, b.category] as const),
+      ...unplannedCategories.map((c) => [c.id, c] as const),
+    ]);
 
-    const budgetProgress = budgets.flatMap((b) => {
-      const spent = spentByCategory.get(b.categoryId) ?? 0;
-      const limit = Number(b.limitAmount);
-      if (limit <= 0 && spent <= 0) return [];
-
-      const remaining = limit - spent;
-      const percent = limit > 0 ? (spent / limit) * 100 : 0;
-      const projected = projectedMonth(spent, daysElapsed, daysInMonth);
-      const expected = expectedToDate(limit, daysElapsed, daysInMonth);
-      const status = paceStatus({
-        spent,
-        limit,
-        day: daysElapsed,
-        daysInMonth,
-        isCurrentMonth,
-      });
-      const paceRatio = expected > 0 ? spent / expected : 0;
-
-      let alert: string | null = null;
-      if (percent >= 100) alert = 'over_limit';
-      else if (percent >= 90) alert = '90_percent';
-      else if (percent >= 75) alert = '75_percent';
-      else if (percent >= 50) alert = '50_percent';
-      else if (projected > limit) alert = 'pace_above_budget';
-
-      return [{
+    const budgetProgress = buildBudgetProgress({
+      budgets: budgets.map((b) => ({
+        categoryId: b.categoryId,
+        limitAmount: Number(b.limitAmount),
         category: b.category,
-        limit,
-        spent,
-        remaining,
-        percent: Math.round(percent * 10) / 10,
-        projected: Math.round(projected * 100) / 100,
-        expectedToDate: expected,
-        paceRatio,
-        paceStatus: status,
-        alert,
-      }];
+      })),
+      spentByCategory: spentRows,
+      categoriesById,
+      daysElapsed,
+      daysInMonth,
+      isCurrentMonth,
     });
 
     const accounts = await prisma.account.findMany({ where: { isActive: true } });
@@ -168,10 +158,7 @@ router.get('/monthly', async (req, res, next) => {
       .filter((budget) => budget.limitAmount > 0);
     const plannedLimits = sumPlannedLimits(plannedBudgets);
     const unplannedExpenses = sumUnplannedExpenses(
-      expensesByCategory.map((row) => ({
-        categoryId: row.categoryId,
-        spent: Number(row._sum.amount ?? 0),
-      })),
+      spentRows,
       plannedBudgets.map((budget) => budget.categoryId),
     );
     const projectedBalance = projectedFreeBalance({
